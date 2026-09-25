@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  /* Matches the ink-950/paper-50 pair every screen wraps itself in, so
+     there's no light-mode flash before that wrapper div paints (section 55). */
+  background: #0b0b0c;
+  color: #f5f3ef;
+  position: relative;
+}
+
+/* Sitewide hexagon-grid texture, tiled behind every screen. A hand-drawn
+   SVG outline (not the LED-kit product photo) so the tile is a true
+   flat-top hex-grid period - width/height ratio 120:69.282 (3R : R*sqrt3,
+   R=40) - and repeats with zero seams, unlike a photo of a finite hexagon
+   cluster. Kept as a pseudo-element (not directly on `body`'s background)
+   so opacity only affects the pattern, not the base color - and `scroll`
+   (never `fixed`) because iOS Safari repaints `background-attachment:
+   fixed` per frame, tanking scroll performance on the mobile-first target.
+   The drop-shadow gives the lines a neon/LED glow (a soft halo around
+   each stroke, from the SVG's own alpha) - static, never
+   animated/pulsing, so it reads as lit rather than flashy. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='69.282'%3E%3Cdefs%3E%3Cpattern id='h' width='120' height='69.282' patternUnits='userSpaceOnUse'%3E%3Cpolygon points='80,34.641 60,69.282 20,69.282 0,34.641 20,0 60,0' fill='none' stroke='%23F5F3EF' stroke-width='1.5'/%3E%3Cpolygon points='140,0 120,34.641 80,34.641 60,0 80,-34.641 120,-34.641' fill='none' stroke='%23F5F3EF' stroke-width='1.5'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='120' height='69.282' fill=\"url(%23h)\"/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 90px 51.96px;
+  opacity: 0.55;
+  filter: drop-shadow(0 0 3px rgba(245, 243, 239, 0.9));
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (min-width: 640px) {
+  body::before {
+    background-size: 130px 75.06px;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 1.6s ease-in-out infinite;
+}
+
+/* section 56: animations must be brief and deliberate, and must never run
+   at all for anyone who's asked the OS to reduce motion - this is the one
+   rule that has to apply everywhere, so it's global rather than repeated
+   per-component. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
