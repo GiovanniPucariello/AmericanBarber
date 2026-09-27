@@ -21,14 +21,20 @@ export async function getCurrentOrganization(): Promise<CurrentOrganization | nu
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data } = await supabase
+  const { data: memberships } = await supabase
     .from("organization_members")
     .select("role, organizations!inner(id, name, slug, timezone, settings)")
     .eq("profile_id", user.id)
     .eq("active", true)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: true });
+
+  // A person can hold several roles (e.g. joined as customer, later made
+  // hairdresser) - the highest one decides access, not the oldest row.
+  const RANK = ["customer", "hairdresser", "manager", "admin", "owner"];
+  const data = (memberships ?? []).reduce<(typeof memberships & object)[number] | null>(
+    (best, m) => (!best || RANK.indexOf(m.role) > RANK.indexOf(best.role) ? m : best),
+    null,
+  );
 
   if (!data) return null;
 

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { DateTime } from "luxon";
 // Display face for the "Il solito?" headline - imported per page like the
 // landing does, so it stays off every other route's CSS.
@@ -19,6 +20,9 @@ export default async function AppHome() {
   if (!organization) {
     return <div className="p-6">Nessuna appartenenza a un&apos;organizzazione.</div>;
   }
+  // Every login lands on /app; staff belong in their own area.
+  if (organization.role === "admin" || organization.role === "owner") redirect("/admin");
+  if (organization.role === "hairdresser" || organization.role === "manager") redirect("/hairdresser");
 
   const supabase = await createClient();
   const {
