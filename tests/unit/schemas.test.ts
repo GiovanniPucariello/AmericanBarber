@@ -163,8 +163,13 @@ describe("createRecurringBookingSchema", () => {
     ).toBe(true);
   });
 
-  it("rejects an interval outside 1-12 weeks", () => {
-    expect(createRecurringBookingSchema.safeParse({ ...base, intervalWeeks: 13 }).success).toBe(false);
+  it("accepts an every-2-weeks interval", () => {
+    expect(createRecurringBookingSchema.safeParse({ ...base, intervalWeeks: 2 }).success).toBe(true);
+  });
+
+  it("rejects intervals other than 1 or 2 weeks", () => {
+    expect(createRecurringBookingSchema.safeParse({ ...base, intervalWeeks: 3 }).success).toBe(false);
+    expect(createRecurringBookingSchema.safeParse({ ...base, intervalWeeks: 0 }).success).toBe(false);
   });
 });
 

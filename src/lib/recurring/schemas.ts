@@ -10,7 +10,7 @@ export const createRecurringBookingSchema = z
     serviceId: looseUuid,
     weekday: z.coerce.number().int().min(0).max(6),
     startTime: z.string().regex(/^\d{2}:\d{2}$/, "Usa il formato HH:MM."),
-    intervalWeeks: z.coerce.number().int().min(1).max(12),
+    intervalWeeks: z.coerce.number().int().min(1).max(2, "Scegli ogni settimana o ogni 2 settimane."),
     startsOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data non valida."),
     endsOn: z
       .string()

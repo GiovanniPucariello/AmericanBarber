@@ -6,6 +6,7 @@ import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
 import "./globals.css";
 import { RegisterServiceWorker } from "@/components/pwa/register-service-worker";
+import { InstallBanner } from "@/components/pwa/install-banner";
 
 // Single-locale app (organization.locale is always "it-IT") - set once here
 // rather than passing { locale: "it" } to every DateTime call site, so
@@ -39,6 +40,7 @@ export default function RootLayout({
   return (
     <html lang="it">
       <body className="font-sans antialiased">
+        <InstallBanner />
         {children}
         <RegisterServiceWorker />
       </body>
