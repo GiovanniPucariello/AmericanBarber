@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const { data: n } = await admin
     .from("notifications")
     .select(
-      "recipient_profile_id, notification_events(type, organizations(timezone), appointments(during, customer_profile_id, hairdressers(display_name), services(name), profiles!appointments_customer_profile_id_fkey(full_name)))",
+      "recipient_profile_id, notification_events(type, appointment_id, organizations(timezone), appointments(during, customer_profile_id, hairdressers(display_name), services(name), profiles!appointments_customer_profile_id_fkey(full_name)))",
     )
     .eq("id", notificationId)
     .maybeSingle();
@@ -58,7 +58,11 @@ export async function POST(request: Request) {
   const sent = await sendPushToProfile(n.recipient_profile_id, {
     title: "American Barber Tattoo",
     body,
-    url: `${basePath}/notifications`,
+    // A message opens its chat directly; everything else the notification list.
+    url:
+      event?.type === "message_received" && event.appointment_id
+        ? `${basePath}/appointments/${event.appointment_id}/messages`
+        : `${basePath}/notifications`,
   });
   return NextResponse.json({ sent });
 }

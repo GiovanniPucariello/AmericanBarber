@@ -17,7 +17,7 @@ import {
 import { FormError } from "@/components/ui/form-error";
 
 export function LoginForm({ oauthError }: { oauthError?: string }) {
-  const [mode, setMode] = useState<"magic-link" | "password">("magic-link");
+  const [mode, setMode] = useState<"magic-link" | "password">("password");
 
   // Two separate hooks, each bound to one stable action - useActionState
   // binds to whichever function it's given on the first render, so feeding
@@ -85,7 +85,9 @@ export function LoginForm({ oauthError }: { oauthError?: string }) {
 
         <button type="submit" disabled={pending} className={primaryButtonClass}>
           {pending
-            ? "..."
+            ? mode === "password"
+              ? "Accesso…"
+              : "Invio…"
             : mode === "password"
               ? "Accedi"
               : "Inviami un link di accesso"}
@@ -95,9 +97,9 @@ export function LoginForm({ oauthError }: { oauthError?: string }) {
       <button
         type="button"
         onClick={() => setMode(mode === "password" ? "magic-link" : "password")}
-        className={`${linkClass} self-center`}
+        className={`${linkClass} self-center py-2`}
       >
-        {mode === "password" ? "Usa un link magico invece" : "Usa una password invece"}
+        {mode === "password" ? "Accedi senza password, con un link via email" : "Accedi con email e password"}
       </button>
 
       <div className="flex justify-between mt-2">

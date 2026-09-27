@@ -30,7 +30,20 @@ function friendlyAuthError(error: AuthError): string {
   if (error.status === undefined) {
     return "Errore di rete - controlla la connessione e riprova.";
   }
-  return error.message;
+  // Supabase messages are English; translate the ones users actually hit.
+  const byCode: Record<string, string> = {
+    invalid_credentials: "Email o password non corretti.",
+    email_not_confirmed: "Conferma prima la tua email: controlla la posta (anche lo spam).",
+    user_already_exists: "Esiste già un account con questa email. Accedi o recupera la password.",
+    email_exists: "Esiste già un account con questa email. Accedi o recupera la password.",
+    weak_password: "Password troppo debole: usa almeno 8 caratteri.",
+    over_email_send_rate_limit: "Troppe email inviate. Riprova tra qualche minuto.",
+    over_request_rate_limit: "Troppi tentativi. Riprova tra qualche minuto.",
+    same_password: "La nuova password deve essere diversa da quella attuale.",
+  };
+  const known = error.code ? byCode[error.code] : undefined;
+  if (!known) console.error("Unmapped auth error", error.code, error.message);
+  return known ?? "Qualcosa è andato storto. Riprova.";
 }
 
 // The fixed NEXT_PUBLIC_SITE_URL env var only ever matches whichever single
