@@ -66,7 +66,9 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
   if (state === "loading" || state === "unsupported") return null;
 
   const text: Record<Exclude<State, "loading" | "unsupported">, string> = {
-    "ios-install": "Su iPhone le notifiche funzionano solo dall'app: tocca Condividi, poi \"Aggiungi alla schermata Home\", e aprila da lì.",
+    "ios-install": /CriOS/.test(typeof navigator === "undefined" ? "" : navigator.userAgent)
+      ? "Su iPhone le notifiche funzionano solo dall'app: in Chrome tocca Condividi, poi \"Visualizza altro\" e \"Aggiungi alla schermata Home\", e aprila da lì."
+      : "Su iPhone le notifiche funzionano solo dall'app: tocca Condividi, poi \"Aggiungi alla schermata Home\", e aprila da lì.",
     denied: "Hai bloccato le notifiche. Riattivale dalle impostazioni del browser per questo sito.",
     off: "Promemoria il giorno prima, posti liberati e messaggi del barbiere.",
     on: "Notifiche attive su questo dispositivo.",
