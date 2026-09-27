@@ -18,9 +18,20 @@ import { organizationSettingsSchema } from "@/lib/organizations/schemas";
 describe("auth schemas", () => {
   it("accepts a valid sign-up", () => {
     expect(
-      signUpSchema.safeParse({ fullName: "Marco Rossi", email: "marco@example.com", password: "longenough" })
-        .success,
+      signUpSchema.safeParse({
+        fullName: "Marco Rossi",
+        email: "marco@example.com",
+        password: "longenough",
+        privacyAccepted: "on",
+      }).success,
     ).toBe(true);
+  });
+
+  it("rejects a sign-up without privacy consent", () => {
+    expect(
+      signUpSchema.safeParse({ fullName: "Marco Rossi", email: "marco@example.com", password: "longenough", privacyAccepted: null })
+        .success,
+    ).toBe(false);
   });
 
   it("rejects a short password", () => {

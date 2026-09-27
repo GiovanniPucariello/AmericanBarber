@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import type { AuthError } from "@supabase/supabase-js";
 import type { ZodError } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   magicLinkSchema,
   passwordSignInSchema,
@@ -57,6 +58,7 @@ export async function signUpWithPassword(
     fullName: formData.get("fullName"),
     email: formData.get("email"),
     password: formData.get("password"),
+    privacyAccepted: formData.get("privacyAccepted"),
   });
   if (!parsed.success) {
     return { error: firstIssueMessage(parsed.error) };
@@ -67,7 +69,8 @@ export async function signUpWithPassword(
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      data: { full_name: parsed.data.fullName },
+      // Consent timestamp kept with the account as proof of acceptance.
+      data: { full_name: parsed.data.fullName, privacy_accepted_at: new Date().toISOString() },
       emailRedirectTo: `${await siteUrl()}/auth/confirm`,
     },
   });
@@ -238,4 +241,40 @@ export async function updateProfile(
 
   revalidatePath("/app", "layout");
   return { error: null, success: "Profilo aggiornato." };
+}
+
+// GDPR self-service erasure (customers only - staff accounts own agendas
+// and are removed by the owner). Deleting the auth user cascades to
+// profiles and every customer-owned row; appointments go first because
+// their created_by FK is ON DELETE RESTRICT.
+export async function deleteOwnAccount(): Promise<AuthActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: memberships } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("profile_id", user.id);
+  if ((memberships ?? []).some((m) => m.role !== "customer")) {
+    return { error: "Gli account dello staff vanno eliminati dal titolare del negozio." };
+  }
+
+  const admin = createAdminClient();
+  const { error: appointmentsError } = await admin
+    .from("appointments")
+    .delete()
+    .eq("customer_profile_id", user.id);
+  const { error: userError } = appointmentsError
+    ? { error: appointmentsError }
+    : await admin.auth.admin.deleteUser(user.id);
+  if (userError) {
+    console.error("deleteOwnAccount failed", userError);
+    return { error: "Non è stato possibile eliminare l'account. Riprova o contatta il negozio." };
+  }
+
+  await supabase.auth.signOut();
+  redirect("/?account=eliminato");
 }

@@ -42,6 +42,13 @@ export function LoginForm({ oauthError }: { oauthError?: string }) {
         <button type="submit" className={`w-full ${secondaryButtonClass}`}>
           Continua con Google
         </button>
+        <p className="mt-2 text-xs text-paper-50/50 text-center">
+          Continuando con Google accetti l&apos;
+          <a href="/privacy" target="_blank" className="underline underline-offset-2">
+            informativa privacy
+          </a>
+          .
+        </p>
       </form>
       <FormError message={oauthError} />
 

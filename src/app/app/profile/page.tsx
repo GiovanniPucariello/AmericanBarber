@@ -3,6 +3,8 @@ import { signOut } from "@/lib/auth/actions";
 import { BusinessInfo } from "@/components/info/business-info";
 import Image from "next/image";
 import { ProfileForm } from "@/components/profile/profile-form";
+import { DeleteAccount } from "@/components/profile/delete-account";
+import Link from "next/link";
 import { getCurrentOrganization } from "@/lib/organizations/queries";
 import { getPreferredHairdresserId } from "@/lib/preferences/queries";
 import { setPreferredHairdresser } from "@/lib/preferences/actions";
@@ -97,6 +99,13 @@ export default async function ProfilePage() {
           Esci
         </button>
       </form>
+
+      <div className="flex flex-col items-center gap-1 pb-4">
+        <Link href="/privacy" className="h-11 flex items-center text-sm text-paper-50/60 underline underline-offset-2">
+          Informativa privacy
+        </Link>
+        <DeleteAccount />
+      </div>
     </div>
   );
 }

@@ -252,9 +252,14 @@ export default async function Home() {
         >
           Seguici su Instagram @{SHOP_INSTAGRAM}
         </a>
-        <Link href="/login" className="text-sm underline underline-offset-2 text-paper-50/60">
-          Accedi
-        </Link>
+        <div className="flex gap-6">
+          <Link href="/login" className="text-sm underline underline-offset-2 text-paper-50/60 py-2">
+            Accedi
+          </Link>
+          <Link href="/privacy" className="text-sm underline underline-offset-2 text-paper-50/60 py-2">
+            Privacy
+          </Link>
+        </div>
       </footer>
     </div>
   );

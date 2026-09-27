@@ -13,6 +13,8 @@ export const signUpSchema = z.object({
   fullName: z.string().trim().min(1, "Inserisci il tuo nome."),
   email: emailSchema,
   password: passwordSchema,
+  // Unchecked checkbox sends nothing (null) - must be explicitly accepted.
+  privacyAccepted: z.literal("on", { error: "Per registrarti devi accettare l'informativa privacy." }),
 });
 
 export const passwordSignInSchema = z.object({
