@@ -3,31 +3,9 @@ import { DateTime } from "luxon";
 import { markAllNotificationsRead, markNotificationRead } from "@/lib/notifications/actions";
 import { parseRange } from "@/lib/availability/intervals";
 import type { Database } from "@/types/database";
+import { summarize } from "@/lib/notifications/summary";
 
 type NotificationRow = Database["public"]["Views"]["notification_feed"]["Row"];
-
-function summarize(n: NotificationRow, basePath: "/app" | "/hairdresser"): string {
-  switch (n.event_type) {
-    case "booking_confirmed":
-      return `Nuova prenotazione - ${n.service_name ?? "un servizio"} con ${n.customer_name ?? "un cliente"}`;
-    case "booking_cancelled":
-      return `Annullata - ${n.service_name ?? "un servizio"} con ${n.customer_name ?? "un cliente"}`;
-    case "recurring_request_created":
-      return `Nuova richiesta ricorrente da ${n.customer_name ?? "un cliente"} per ${n.service_name ?? "un servizio"}`;
-    case "recurring_request_approved":
-      return `La tua prenotazione ricorrente per ${n.service_name ?? "un servizio"} con ${n.hairdresser_name ?? "il tuo barbiere"} è stata approvata`;
-    case "recurring_request_rejected":
-      return `La tua richiesta di prenotazione ricorrente per ${n.service_name ?? "un servizio"} con ${n.hairdresser_name ?? "il tuo barbiere"} è stata rifiutata`;
-    case "message_received":
-      return basePath === "/app"
-        ? `Nuovo messaggio da ${n.hairdresser_name ?? "il tuo barbiere"}`
-        : `Nuovo messaggio da ${n.customer_name ?? "un cliente"}`;
-    case "waitlist_slot_freed":
-      return `Si è liberato un posto con ${n.hairdresser_name ?? "il tuo barbiere"} - prenota prima che lo prenda qualcun altro`;
-    default:
-      return n.event_type ?? "Notifica";
-  }
-}
 
 export function NotificationList({
   notifications,

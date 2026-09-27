@@ -4,6 +4,7 @@ import { BusinessInfo } from "@/components/info/business-info";
 import Image from "next/image";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { DeleteAccount } from "@/components/profile/delete-account";
+import { PushToggle } from "@/components/push/push-toggle";
 import Link from "next/link";
 import { getCurrentOrganization } from "@/lib/organizations/queries";
 import { getPreferredHairdresserId } from "@/lib/preferences/queries";
@@ -40,6 +41,8 @@ export default async function ProfilePage() {
         <h1 className="text-xl font-semibold">Profilo</h1>
         <p className="text-paper-50/60 text-sm">{user?.email}</p>
       </div>
+
+      <PushToggle />
 
       <section className="rounded-lg bg-ink-900 border border-paper-50/15 p-4">
         <ProfileForm fullName={profile?.full_name ?? ""} phone={profile?.phone ?? ""} />

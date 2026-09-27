@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { NavIcon } from "@/components/layout/nav-icon";
+import { PushToggle } from "@/components/push/push-toggle";
 import { notFound, redirect } from "next/navigation";
 import { DateTime } from "luxon";
 import { createClient } from "@/lib/supabase/server";
@@ -68,6 +69,9 @@ export default async function BookingSuccessPage({
       >
         Vedi l&apos;appuntamento
       </Link>
+      </div>
+      <div className="w-full max-w-xs text-left">
+        <PushToggle />
       </div>
     </div>
   );

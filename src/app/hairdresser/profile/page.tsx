@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/auth/actions";
 import { getCurrentOrganization } from "@/lib/organizations/queries";
 import { getCurrentHairdresser } from "@/lib/hairdressers/queries";
+import { PushToggle } from "@/components/push/push-toggle";
 
 export default async function HairdresserProfilePage() {
   const organization = await getCurrentOrganization();
@@ -19,6 +20,7 @@ export default async function HairdresserProfilePage() {
         <p>{hairdresser?.displayName ?? "—"}</p>
         <p className="text-paper-50/60 text-sm">{user?.email}</p>
       </div>
+      <PushToggle />
       <form action={signOut}>
         <button
           type="submit"
