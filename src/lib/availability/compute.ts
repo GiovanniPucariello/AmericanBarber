@@ -215,3 +215,21 @@ export async function computeDaySchedule(
       available: isFree(start, end),
     }));
 }
+
+// First day (starting at fromDate, looking `days` ahead) with at least one
+// bookable slot - powers "open on the first free day" in the picker and the
+// home screen's "Il solito?" suggestion.
+// ponytail: sequential per-day lookups, fine for a week; one multi-day query if it gets slow.
+export async function findFirstAvailableDay(
+  supabase: SupabaseClient<Database>,
+  params: Omit<ComputeAvailableSlotsParams, "date"> & { fromDate: string; days: number },
+): Promise<{ date: string; slots: DaySlot[] } | null> {
+  const { fromDate, days, ...rest } = params;
+  const [y, m, d] = fromDate.split("-").map(Number);
+  for (let i = 0; i < days; i++) {
+    const date = new Date(Date.UTC(y, m - 1, d + i)).toISOString().slice(0, 10);
+    const slots = await computeDaySchedule(supabase, { ...rest, date });
+    if (slots.some((slot) => slot.available)) return { date, slots };
+  }
+  return null;
+}

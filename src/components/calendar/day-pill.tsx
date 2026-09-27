@@ -17,7 +17,7 @@ export function DayPill({
   return (
     <span
       className={`flex flex-col items-center justify-center gap-0.5 w-full h-full rounded-md transition-colors duration-150 ${
-        selected ? "bg-accent text-paper-50" : today ? "text-accent" : "text-paper-50/80"
+        selected ? "bg-accent text-paper-50" : today ? "text-paper-50 font-semibold ring-1 ring-inset ring-paper-50/40" : "text-paper-50/80"
       }`}
     >
       <span className="text-[11px] uppercase">{weekday}</span>

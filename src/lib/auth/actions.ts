@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import type { AuthError } from "@supabase/supabase-js";
 import type { ZodError } from "zod";
@@ -8,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   magicLinkSchema,
   passwordSignInSchema,
+  profileSchema,
   resetRequestSchema,
   signUpSchema,
   updatePasswordSchema,
@@ -185,12 +187,10 @@ export async function updatePassword(
 export async function signInWithGoogle() {
   const supabase = await createClient();
   const resolvedSiteUrl = await siteUrl();
-  console.log("[DEBUG signInWithGoogle] resolvedSiteUrl =", resolvedSiteUrl);
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo: `${resolvedSiteUrl}/auth/callback` },
   });
-  console.log("[DEBUG signInWithGoogle] data.url =", data?.url);
 
   if (error || !data.url) {
     const message = error
@@ -206,4 +206,36 @@ export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+export async function updateProfile(
+  _prevState: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const parsed = profileSchema.safeParse({
+    fullName: formData.get("fullName"),
+    phone: formData.get("phone") ?? "",
+  });
+  if (!parsed.success) {
+    return { error: firstIssueMessage(parsed.error) };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  // RLS "profiles: update own" is the real guard; the id filter just
+  // targets the row.
+  const { error } = await supabase
+    .from("profiles")
+    .update({ full_name: parsed.data.fullName, phone: parsed.data.phone || null })
+    .eq("id", user.id);
+  if (error) {
+    return { error: "Impossibile salvare le modifiche. Riprova." };
+  }
+
+  revalidatePath("/app", "layout");
+  return { error: null, success: "Profilo aggiornato." };
 }

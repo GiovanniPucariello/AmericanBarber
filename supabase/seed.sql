@@ -26,20 +26,20 @@ values (
 )
 on conflict (id) do nothing;
 
-insert into public.hairdressers (id, organization_id, display_name, avatar_url, active, sort_order)
+insert into public.hairdressers (id, organization_id, display_name, avatar_url, instagram_handle, active, sort_order)
 values
-  ('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000001', 'Angelo', '/team/angelo.png', true, 1),
-  ('00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000001', 'Cimbone', '/team/cimbone.png', true, 2),
-  ('00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000001', 'Vito', '/team/vito.png', true, 3),
-  ('00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000001', 'Fede', '/team/fede.png', true, 4),
-  ('00000000-0000-0000-0000-000000000205', '00000000-0000-0000-0000-000000000001', 'Luigi', '/team/luigi.png', true, 5)
-on conflict (id) do update set avatar_url = excluded.avatar_url;
+  ('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000001', 'Angelo', '/team/angelo.png', 'angelobarberscarlatella', true, 1),
+  ('00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000001', 'Cimbone', '/team/cimbone.png', 'tonti.alessandro', true, 2),
+  ('00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000001', 'Vito', '/team/vito.png', null, true, 3),
+  ('00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000001', 'Fede', '/team/fede.png', null, true, 4),
+  ('00000000-0000-0000-0000-000000000205', '00000000-0000-0000-0000-000000000001', 'Luigi', '/team/luigi.png', null, true, 5)
+on conflict (id) do update set avatar_url = excluded.avatar_url, instagram_handle = excluded.instagram_handle;
 
-insert into public.services (id, organization_id, name, duration_minutes, active, sort_order)
+insert into public.services (id, organization_id, name, duration_minutes, price_cents, active, sort_order)
 values
-  ('00000000-0000-0000-0000-000000000301', '00000000-0000-0000-0000-000000000001', 'Taglio', 30, true, 1),
-  ('00000000-0000-0000-0000-000000000302', '00000000-0000-0000-0000-000000000001', 'Barba', 30, true, 2),
-  ('00000000-0000-0000-0000-000000000303', '00000000-0000-0000-0000-000000000001', 'Taglio + Barba', 60, true, 3)
+  ('00000000-0000-0000-0000-000000000301', '00000000-0000-0000-0000-000000000001', 'Taglio', 30, 2000, true, 1),
+  ('00000000-0000-0000-0000-000000000302', '00000000-0000-0000-0000-000000000001', 'Barba', 30, 1000, true, 2),
+  ('00000000-0000-0000-0000-000000000303', '00000000-0000-0000-0000-000000000001', 'Taglio + Barba', 60, 3000, true, 3)
 on conflict (id) do nothing;
 
 insert into public.hairdresser_services (hairdresser_id, service_id)

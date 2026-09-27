@@ -22,6 +22,8 @@ function summarize(n: NotificationRow, basePath: "/app" | "/hairdresser"): strin
       return basePath === "/app"
         ? `Nuovo messaggio da ${n.hairdresser_name ?? "il tuo barbiere"}`
         : `Nuovo messaggio da ${n.customer_name ?? "un cliente"}`;
+    case "waitlist_slot_freed":
+      return `Si è liberato un posto con ${n.hairdresser_name ?? "il tuo barbiere"} - prenota prima che lo prenda qualcun altro`;
     default:
       return n.event_type ?? "Notifica";
   }
@@ -67,6 +69,13 @@ export function NotificationList({
                 {n.event_type === "message_received" && n.appointment_id ? (
                   <Link
                     href={`${basePath}/appointments/${n.appointment_id}/messages`}
+                    className={`underline underline-offset-2 ${unread ? "font-medium" : "text-paper-50/70"}`}
+                  >
+                    {summarize(n, basePath)}
+                  </Link>
+                ) : n.event_type === "waitlist_slot_freed" ? (
+                  <Link
+                    href="/app/book"
                     className={`underline underline-offset-2 ${unread ? "font-medium" : "text-paper-50/70"}`}
                   >
                     {summarize(n, basePath)}

@@ -31,3 +31,13 @@ export const resetRequestSchema = z.object({
 export const updatePasswordSchema = z.object({
   password: passwordSchema,
 });
+
+export const profileSchema = z.object({
+  fullName: z.string().trim().min(1, "Inserisci il tuo nome.").max(100),
+  // Optional, but if given it must look like a phone number the shop can call.
+  phone: z
+    .string()
+    .trim()
+    .max(20)
+    .regex(/^(\+?[0-9 ]{6,20})?$/, "Inserisci un numero di telefono valido."),
+});

@@ -5,6 +5,7 @@ import {
   createRecurringBookingRequest,
   type RecurringActionState,
 } from "@/lib/recurring/actions";
+import { FormError } from "@/components/ui/form-error";
 
 const initialState: RecurringActionState = { error: null };
 
@@ -15,8 +16,6 @@ const WEEKDAY_LABELS = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerd
 const INTERVAL_OPTIONS = [
   { value: "1", label: "Ogni settimana" },
   { value: "2", label: "Ogni 2 settimane" },
-  { value: "3", label: "Ogni 3 settimane" },
-  { value: "4", label: "Ogni 4 settimane" },
 ];
 
 type Service = { id: string; name: string };
@@ -212,7 +211,7 @@ export function RecurringRequestWizard({
         </div>
       )}
 
-      {state.error && <p className="text-accent text-sm">{state.error}</p>}
+      <FormError message={state.error} />
 
       <div className="flex gap-3 mt-2">
         {step > 0 && (

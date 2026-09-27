@@ -5,6 +5,7 @@ import { DateTime } from "luxon";
 import "@/lib/luxon-locale";
 import { sendAppointmentMessage, type SendAppointmentMessageState } from "@/lib/messages/actions";
 import type { ThreadMessage } from "@/lib/messages/queries";
+import { FormError } from "@/components/ui/form-error";
 
 const initialState: SendAppointmentMessageState = { error: null };
 
@@ -65,7 +66,7 @@ export function MessageThread({
           Questo appuntamento non è più attivo - non è possibile inviare nuovi messaggi.
         </p>
       )}
-      {state.error && <p className="text-accent text-sm">{state.error}</p>}
+      <FormError message={state.error} />
     </div>
   );
 }

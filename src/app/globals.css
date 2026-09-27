@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Dark UI: tells the browser to draw native controls (date/time picker
+   icons and popups, scrollbars) light-on-dark - otherwise the calendar
+   and clock icons render black on the ink background and look missing. */
+:root {
+  color-scheme: dark;
+}
+
+input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
 body {
   /* Matches the ink-950/paper-50 pair every screen wraps itself in, so
      there's no light-mode flash before that wrapper div paints (section 55). */
@@ -28,16 +39,32 @@ body::before {
   background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='69.282'%3E%3Cdefs%3E%3Cpattern id='h' width='120' height='69.282' patternUnits='userSpaceOnUse'%3E%3Cpolygon points='80,34.641 60,69.282 20,69.282 0,34.641 20,0 60,0' fill='none' stroke='%23F5F3EF' stroke-width='1.5'/%3E%3Cpolygon points='140,0 120,34.641 80,34.641 60,0 80,-34.641 120,-34.641' fill='none' stroke='%23F5F3EF' stroke-width='1.5'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='120' height='69.282' fill=\"url(%23h)\"/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 90px 51.96px;
-  opacity: 0.55;
+  opacity: 0.4;
   filter: drop-shadow(0 0 3px rgba(245, 243, 239, 0.9));
+  /* Dims the grid toward the middle of the viewport, where text lives, and
+     lets it glow at the edges - reads like light off a shop window. */
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(0, 0, 0, 0.25), #000);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(0, 0, 0, 0.25), #000);
   pointer-events: none;
-  z-index: 0;
+  /* -1, not 0: body has no z-index so this sits behind all in-flow content
+     (above the canvas background) - at 0 it painted over every
+     non-positioned card and line of text. */
+  z-index: -1;
 }
 
 @media (min-width: 640px) {
   body::before {
     background-size: 130px 75.06px;
   }
+}
+
+/* Horizontal swipe rows (date strip, service chips) - the default desktop
+   scrollbar rendered as a bright white bar under them. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes fade-in {

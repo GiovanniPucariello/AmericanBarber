@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { DateTime } from "luxon";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrganization } from "@/lib/organizations/queries";
+import { computeAvailableSlots } from "@/lib/availability/compute";
+import { parseRange } from "@/lib/availability/intervals";
 import { createAppointmentSchema } from "./schemas";
 
 export type BookingActionState = { error: string | null };
@@ -58,6 +60,29 @@ export async function createAppointment(
   const start = DateTime.fromISO(parsed.data.startUtc, { zone: "utc" });
   const end = start.plus({ minutes: service.duration_minutes });
 
+  // The exclusion constraint only stops overlaps - it knows nothing about
+  // working hours, days off, past times or which services a barber does.
+  // A tampered or stale link must only book a slot the picker would offer.
+  const { data: offered } = await supabase
+    .from("hairdresser_services")
+    .select("hairdresser_id, hairdressers!inner(active)")
+    .eq("hairdresser_id", parsed.data.hairdresserId)
+    .eq("service_id", parsed.data.serviceId)
+    .eq("hairdressers.active", true)
+    .maybeSingle();
+  if (!offered) return { error: "Questo barbiere non offre il servizio scelto." };
+
+  const openSlots = await computeAvailableSlots(supabase, {
+    hairdresserId: parsed.data.hairdresserId,
+    date: start.setZone(organization.timezone).toISODate() as string,
+    timeZone: organization.timezone,
+    serviceDurationMinutes: service.duration_minutes,
+    bookingIntervalMinutes: organization.bookingIntervalMinutes,
+  });
+  if (!openSlots.some((slot) => Date.parse(slot.startUtc) === start.toMillis())) {
+    return { error: "Questo orario non è più disponibile. Scegli un altro orario." };
+  }
+
   const { data: appointment, error } = await supabase
     .from("appointments")
     .insert({
@@ -83,7 +108,8 @@ export async function createAppointment(
         error: "Questo orario è appena stato preso. Scegli un altro orario.",
       };
     }
-    return { error: error.message };
+    console.error("createAppointment insert failed", error);
+    return { error: "Non è stato possibile completare la prenotazione. Riprova." };
   }
 
   await supabase.rpc("emit_notification_event", {
@@ -101,6 +127,22 @@ export async function cancelAppointment(id: string): Promise<void> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
+
+  // Only upcoming, still-active appointments can be cancelled - not a past
+  // or completed one (RLS alone allows any own row).
+  const { data: appointment } = await supabase
+    .from("appointments")
+    .select("status, during")
+    .eq("id", id)
+    .eq("customer_profile_id", user.id)
+    .maybeSingle();
+  if (
+    !appointment ||
+    !["pending", "confirmed"].includes(appointment.status) ||
+    parseRange(appointment.during as string).start <= Date.now()
+  ) {
+    return;
+  }
 
   await supabase
     .from("appointments")

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { updatePassword } from "@/lib/auth/actions";
 import { authInitialState } from "@/lib/auth/state";
 import { inputClass, primaryButtonClass } from "./styles";
+import { FormError } from "@/components/ui/form-error";
 
 export function UpdatePasswordForm() {
   const [state, formAction, pending] = useActionState(
@@ -22,7 +23,7 @@ export function UpdatePasswordForm() {
         className={inputClass}
       />
 
-      {state.error && <p className="text-accent text-sm">{state.error}</p>}
+      <FormError message={state.error} />
 
       <button type="submit" disabled={pending} className={primaryButtonClass}>
         {pending ? "..." : "Imposta nuova password"}

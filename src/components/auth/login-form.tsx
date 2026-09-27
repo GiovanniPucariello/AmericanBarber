@@ -14,6 +14,7 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from "./styles";
+import { FormError } from "@/components/ui/form-error";
 
 export function LoginForm({ oauthError }: { oauthError?: string }) {
   const [mode, setMode] = useState<"magic-link" | "password">("magic-link");
@@ -42,7 +43,7 @@ export function LoginForm({ oauthError }: { oauthError?: string }) {
           Continua con Google
         </button>
       </form>
-      {oauthError && <p className="text-accent text-sm">{oauthError}</p>}
+      <FormError message={oauthError} />
 
       <div className="flex items-center gap-3 text-paper-50/40 text-xs">
         <div className="h-px flex-1 bg-paper-50/15" />
@@ -70,7 +71,7 @@ export function LoginForm({ oauthError }: { oauthError?: string }) {
           />
         )}
 
-        {state.error && <p className="text-accent text-sm">{state.error}</p>}
+        <FormError message={state.error} />
         {state.success && (
           <p className="text-paper-50/70 text-sm">{state.success}</p>
         )}

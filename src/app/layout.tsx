@@ -26,6 +26,9 @@ export const viewport: Viewport = {
   themeColor: "#0B0B0C",
   width: "device-width",
   initialScale: 1,
+  // Lets env(safe-area-inset-*) resolve under the black-translucent PWA
+  // status bar and home indicator.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

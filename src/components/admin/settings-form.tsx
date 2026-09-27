@@ -5,6 +5,7 @@ import {
   updateOrganizationSettings,
   type OrganizationSettingsActionState,
 } from "@/lib/organizations/actions";
+import { FormError } from "@/components/ui/form-error";
 
 const initialState: OrganizationSettingsActionState = { error: null };
 
@@ -93,7 +94,7 @@ export function SettingsForm({
         />
       </label>
 
-      {state.error && <p className="text-accent text-sm">{state.error}</p>}
+      <FormError message={state.error} />
       {state.success && <p className="text-paper-50/70 text-sm">{state.success}</p>}
 
       <button

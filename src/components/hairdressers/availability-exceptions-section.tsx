@@ -6,6 +6,7 @@ import {
   deleteAvailabilityException,
   type AvailabilityActionState,
 } from "@/lib/availability/actions";
+import { FormError } from "@/components/ui/form-error";
 
 const initialState: AvailabilityActionState = { error: null };
 
@@ -101,7 +102,7 @@ export function AvailabilityExceptionsSection({
           {pending ? "..." : "Aggiungi"}
         </button>
       </form>
-      {state.error && <p className="text-accent text-sm">{state.error}</p>}
+      <FormError message={state.error} />
     </section>
   );
 }

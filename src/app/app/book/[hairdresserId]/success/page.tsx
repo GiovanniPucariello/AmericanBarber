@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NavIcon } from "@/components/layout/nav-icon";
 import { notFound, redirect } from "next/navigation";
 import { DateTime } from "luxon";
 import { createClient } from "@/lib/supabase/server";
@@ -53,12 +54,21 @@ export default async function BookingSuccessPage({
         <p className="text-paper-50/70">{start.toFormat("HH:mm")}</p>
         <p className="text-paper-50/70 text-sm mt-1">{service?.name}</p>
       </div>
+      <div className="flex flex-col gap-2 w-full max-w-xs">
+      <a
+        href={`/app/appointments/${appointmentId}/calendar`}
+        className="h-12 px-8 rounded-md border border-paper-50/25 text-paper-50 font-medium flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+      >
+        <NavIcon name="calendar" className="w-5 h-5" />
+        Aggiungi al calendario
+      </a>
       <Link
         href="/app/appointments"
         className="h-12 px-8 rounded-md bg-accent text-paper-50 font-medium flex items-center justify-center transition-[background-color,transform] hover:bg-accent-hover active:scale-[0.98]"
       >
         Vedi l&apos;appuntamento
       </Link>
+      </div>
     </div>
   );
 }

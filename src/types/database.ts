@@ -465,6 +465,133 @@ export type Database = {
           },
         ]
       }
+      customer_notes: {
+        Row: {
+          author_profile_id: string | null
+          body: string
+          created_at: string
+          customer_profile_id: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          author_profile_id?: string | null
+          body: string
+          created_at?: string
+          customer_profile_id: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          author_profile_id?: string | null
+          body?: string
+          created_at?: string
+          customer_profile_id?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notes_author_profile_id_fkey"
+            columns: ["author_profile_id"]
+            isOneToOne: false
+            referencedRelation: "co_member_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_notes_author_profile_id_fkey"
+            columns: ["author_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_notes_customer_profile_id_fkey"
+            columns: ["customer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "co_member_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_notes_customer_profile_id_fkey"
+            columns: ["customer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_notes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_marketing_profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_notes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_preferences: {
+        Row: {
+          organization_id: string
+          preferred_hairdresser_id: string | null
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          preferred_hairdresser_id?: string | null
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          organization_id?: string
+          preferred_hairdresser_id?: string | null
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_preferences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_marketing_profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_preferences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_preferences_preferred_hairdresser_id_fkey"
+            columns: ["preferred_hairdresser_id"]
+            isOneToOne: false
+            referencedRelation: "hairdressers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_preferences_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "co_member_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_preferences_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hairdresser_services: {
         Row: {
           hairdresser_id: string
@@ -503,6 +630,7 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          instagram_handle: string | null
           organization_id: string
           profile_id: string | null
           sort_order: number
@@ -515,6 +643,7 @@ export type Database = {
           created_at?: string
           display_name: string
           id?: string
+          instagram_handle?: string | null
           organization_id: string
           profile_id?: string | null
           sort_order?: number
@@ -527,6 +656,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          instagram_handle?: string | null
           organization_id?: string
           profile_id?: string | null
           sort_order?: number
@@ -1092,6 +1222,72 @@ export type Database = {
           },
         ]
       }
+      waitlist_entries: {
+        Row: {
+          created_at: string
+          customer_profile_id: string
+          date: string
+          hairdresser_id: string
+          id: string
+          notified_at: string | null
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_profile_id: string
+          date: string
+          hairdresser_id: string
+          id?: string
+          notified_at?: string | null
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_profile_id?: string
+          date?: string
+          hairdresser_id?: string
+          id?: string
+          notified_at?: string | null
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_entries_customer_profile_id_fkey"
+            columns: ["customer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "co_member_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_entries_customer_profile_id_fkey"
+            columns: ["customer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_entries_hairdresser_id_fkey"
+            columns: ["hairdresser_id"]
+            isOneToOne: false
+            referencedRelation: "hairdressers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_entries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_marketing_profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_entries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       co_member_profiles: {
@@ -1234,6 +1430,7 @@ export type Database = {
         | "reminder_1h"
         | "schedule_changed"
         | "message_received"
+        | "waitlist_slot_freed"
       notification_status: "pending" | "sent" | "failed" | "read"
       org_role: "customer" | "hairdresser" | "manager" | "admin" | "owner"
       recurring_booking_status:
@@ -1403,6 +1600,7 @@ export const Constants = {
         "reminder_1h",
         "schedule_changed",
         "message_received",
+        "waitlist_slot_freed",
       ],
       notification_status: ["pending", "sent", "failed", "read"],
       org_role: ["customer", "hairdresser", "manager", "admin", "owner"],

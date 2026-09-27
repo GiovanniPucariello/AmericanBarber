@@ -99,6 +99,20 @@ export default async function HairdresserAgendaPage({
     ? await supabase.from("co_member_profiles").select("id, full_name").in("id", customerIds)
     : { data: [] };
   const nameById = new Map((customers ?? []).map((c) => [c.id, c.full_name]));
+  const { data: notes } = customerIds.length
+    ? await supabase
+        .from("customer_notes")
+        .select("customer_profile_id, body")
+        .eq("organization_id", organization.id)
+        .in("customer_profile_id", customerIds)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+  // Newest note per customer, shown inline so it's visible before the cut.
+  const latestNoteByCustomer = new Map<string, string>();
+  for (const n of notes ?? []) {
+    if (!latestNoteByCustomer.has(n.customer_profile_id)) latestNoteByCustomer.set(n.customer_profile_id, n.body);
+  }
+  const customerIdByAppointment = new Map(todaysAppointments.map((a) => [a.id, a.customerProfileId]));
   const unreadCounts = await getUnreadMessageCounts(
     supabase,
     todaysAppointments.map((a) => a.id),
@@ -182,9 +196,19 @@ export default async function HairdresserAgendaPage({
             return (
               <li key={i} className="flex items-center gap-3 rounded-md bg-ink-900 border border-paper-50/15 p-3">
                 <span className="w-14 shrink-0 text-sm">{time}</span>
-                <div className="flex-1">
-                  <p>{item.customerName}</p>
+                <div className="flex-1 min-w-0">
+                  <Link
+                    href={`/hairdresser/customers/${customerIdByAppointment.get(item.id)}`}
+                    className="underline underline-offset-2"
+                  >
+                    {item.customerName}
+                  </Link>
                   <p className="text-paper-50/60 text-sm">{item.serviceName}</p>
+                  {latestNoteByCustomer.get(customerIdByAppointment.get(item.id) ?? "") && (
+                    <p className="text-sm text-paper-50/80 mt-1 line-clamp-2">
+                      {latestNoteByCustomer.get(customerIdByAppointment.get(item.id) ?? "")}
+                    </p>
+                  )}
                 </div>
                 <Link
                   href={`/hairdresser/appointments/${item.id}/messages`}

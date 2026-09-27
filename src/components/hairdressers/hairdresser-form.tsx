@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { HairdresserActionState } from "@/lib/hairdressers/actions";
+import { FormError } from "@/components/ui/form-error";
 
 const initialState: HairdresserActionState = { error: null };
 
@@ -51,7 +52,7 @@ export function HairdresserForm({
         className={inputClass}
       />
 
-      {state.error && <p className="text-accent text-sm">{state.error}</p>}
+      <FormError message={state.error} />
 
       <button
         type="submit"

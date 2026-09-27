@@ -1,18 +1,22 @@
 import Link from "next/link";
 import { getUnreadNotificationCount } from "@/lib/notifications/queries";
+import { NavIcon } from "@/components/layout/nav-icon";
 
-// Deliberately plain text, not an icon - nothing else in this app's nav
-// uses icons (bottom-nav.tsx is text-label only), so a bell glyph here
-// would be the one inconsistent element on the page.
 export async function NotificationBell({ href }: { href: string }) {
   const unreadCount = await getUnreadNotificationCount();
 
   return (
     <Link
       href={href}
-      className="fixed top-0 right-0 z-10 m-3 h-9 px-3 rounded-full bg-ink-900 border border-paper-50/15 flex items-center text-sm text-paper-50"
+      aria-label={unreadCount > 0 ? `Notifiche, ${unreadCount} non lette` : "Notifiche"}
+      className="relative w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-paper-50/80 hover:text-paper-50 active:scale-[0.94] transition-transform"
     >
-      Notifiche{unreadCount > 0 ? ` (${unreadCount})` : ""}
+      <NavIcon name="bell" />
+      {unreadCount > 0 && (
+        <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-paper-50 text-[11px] font-semibold leading-[18px] text-center">
+          {unreadCount > 9 ? "9+" : unreadCount}
+        </span>
+      )}
     </Link>
   );
 }

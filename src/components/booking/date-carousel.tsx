@@ -39,7 +39,7 @@ export function DateCarousel({
 
   return (
     <div
-      className={`flex gap-2 overflow-x-auto snap-x pb-1 -mx-6 px-6 transition-opacity duration-150 ${
+      className={`flex gap-2 overflow-x-auto snap-x -mx-6 px-6 scroll-pl-6 no-scrollbar transition-opacity duration-150 ${
         isPending ? "opacity-70" : "opacity-100"
       }`}
     >

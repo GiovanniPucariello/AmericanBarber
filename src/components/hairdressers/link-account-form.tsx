@@ -5,6 +5,7 @@ import {
   linkHairdresserAccount,
   type LinkHairdresserAccountState,
 } from "@/lib/hairdressers/actions";
+import { FormError } from "@/components/ui/form-error";
 
 const initialState: LinkHairdresserAccountState = { error: null };
 
@@ -41,7 +42,7 @@ export function LinkAccountForm({
         placeholder="Password provvisoria (almeno 8 caratteri)"
         className={inputClass}
       />
-      {state.error && <p className="text-accent text-sm">{state.error}</p>}
+      <FormError message={state.error} />
       <button
         type="submit"
         disabled={pending}

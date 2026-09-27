@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { DateTime } from "luxon";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrganization } from "@/lib/organizations/queries";
-import { cancelAppointment } from "@/lib/bookings/actions";
+import { NavIcon } from "@/components/layout/nav-icon";
+import { CancelAppointmentButton } from "@/components/appointments/cancel-appointment-button";
 import { parseRange } from "@/lib/availability/intervals";
 import { getUnreadMessageCounts } from "@/lib/messages/queries";
 
@@ -46,7 +47,8 @@ export default async function AppointmentsPage() {
   });
 
   const upcoming = rows.filter((r) => !r.isPast);
-  const past = rows.filter((r) => r.isPast);
+  // Most recent first - nobody scrolls past last year to find last week.
+  const past = rows.filter((r) => r.isPast).reverse();
 
   const unreadCounts = user
     ? await getUnreadMessageCounts(supabase, upcoming.map((r) => r.id), user.id)
@@ -55,8 +57,8 @@ export default async function AppointmentsPage() {
   return (
     <div className="p-6 flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">I tuoi appuntamenti</h1>
-        <Link href="/app/appointments/recurring" className="text-sm underline underline-offset-2">
+        <h1 className="text-xl font-semibold">I tuoi appuntamenti</h1>
+        <Link href="/app/appointments/recurring" className="h-11 -mr-2 px-2 flex items-center text-sm underline underline-offset-2">
           Ricorrenti
         </Link>
       </div>
@@ -76,36 +78,59 @@ export default async function AppointmentsPage() {
       )}
 
       {upcoming.length > 0 && (
-        <ul className="flex flex-col gap-2">
-          {upcoming.map((a) => (
-            <li
-              key={a.id}
-              className="flex items-center justify-between gap-3 rounded-md bg-ink-900 border border-paper-50/15 p-4"
-            >
-              <div>
-                <p className="font-medium">{a.start.toFormat("cccc d LLLL, HH:mm")}</p>
-                <p className="text-paper-50/60 text-sm">
-                  {a.hairdresser?.display_name} - {a.service?.name}
-                </p>
-                <p className="text-paper-50/40 text-sm capitalize">{STATUS_LABELS[a.status] ?? a.status}</p>
-              </div>
-              {(a.status === "confirmed" || a.status === "pending") && (
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  <Link
-                    href={`/app/appointments/${a.id}/messages`}
-                    className="text-sm underline underline-offset-2"
+        <ul className="flex flex-col gap-3">
+          {upcoming.map((a) => {
+            const unread = unreadCounts.get(a.id) ?? 0;
+            const active = a.status === "confirmed" || a.status === "pending";
+            return (
+              <li
+                key={a.id}
+                className="rounded-lg bg-ink-900 border border-paper-50/15 p-4 flex flex-col gap-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-paper-50/60 capitalize">{a.start.toFormat("cccc d LLLL")}</p>
+                    <p className="text-2xl font-semibold tabular-nums leading-tight">{a.start.toFormat("HH:mm")}</p>
+                    <p className="text-paper-50/70 text-sm mt-0.5">
+                      {a.hairdresser?.display_name} · {a.service?.name}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 h-6 px-2 rounded-full text-xs font-medium flex items-center ${
+                      a.status === "confirmed"
+                        ? "bg-paper-50 text-ink-950"
+                        : "border border-paper-50/30 text-paper-50/80"
+                    }`}
                   >
-                    Messaggi{unreadCounts.get(a.id) ? ` (${unreadCounts.get(a.id)})` : ""}
-                  </Link>
-                  <form action={cancelAppointment.bind(null, a.id)}>
-                    <button type="submit" className="text-sm underline underline-offset-2">
-                      Annulla
-                    </button>
-                  </form>
+                    {STATUS_LABELS[a.status] ?? a.status}
+                  </span>
                 </div>
-              )}
-            </li>
-          ))}
+                {active && (
+                  <div className="flex flex-col gap-2 border-t border-paper-50/10 pt-3">
+                    <Link
+                      href={`/app/appointments/${a.id}/messages`}
+                      className="h-11 px-4 rounded-md bg-ink-800 border border-paper-50/15 text-sm font-medium flex items-center justify-between"
+                    >
+                      Scrivi a {a.hairdresser?.display_name ?? "barbiere"}
+                      {unread > 0 && (
+                        <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-paper-50 text-xs font-semibold flex items-center justify-center">
+                          {unread}
+                        </span>
+                      )}
+                    </Link>
+                    <a
+                      href={`/app/appointments/${a.id}/calendar`}
+                      className="h-11 px-4 rounded-md border border-paper-50/15 text-sm font-medium flex items-center gap-2"
+                    >
+                      <NavIcon name="calendar" className="w-5 h-5" />
+                      Aggiungi al calendario
+                    </a>
+                    <CancelAppointmentButton appointmentId={a.id} />
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -118,9 +143,9 @@ export default async function AppointmentsPage() {
                 key={a.id}
                 className="rounded-md bg-ink-900 border border-paper-50/10 p-4 opacity-60"
               >
-                <p>{a.start.toFormat("cccc d LLLL, HH:mm")}</p>
+                <p className="capitalize">{a.start.toFormat("cccc d LLLL, HH:mm")}</p>
                 <p className="text-paper-50/60 text-sm">
-                  {a.hairdresser?.display_name} - {a.service?.name}
+                  {a.hairdresser?.display_name} · {a.service?.name}
                 </p>
               </li>
             ))}

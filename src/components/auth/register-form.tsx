@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signUpWithPassword } from "@/lib/auth/actions";
 import { authInitialState } from "@/lib/auth/state";
 import { inputClass, linkClass, primaryButtonClass } from "./styles";
+import { FormError } from "@/components/ui/form-error";
 
 export function RegisterForm() {
   const [state, formAction, pending] = useActionState(
@@ -43,7 +44,7 @@ export function RegisterForm() {
         className={inputClass}
       />
 
-      {state.error && <p className="text-accent text-sm">{state.error}</p>}
+      <FormError message={state.error} />
 
       <button type="submit" disabled={pending} className={primaryButtonClass}>
         {pending ? "..." : "Crea account"}

@@ -4,9 +4,11 @@ import { notFound, redirect } from "next/navigation";
 import { DateTime } from "luxon";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrganization } from "@/lib/organizations/queries";
-import { computeDaySchedule } from "@/lib/availability/compute";
+import { computeDaySchedule, findFirstAvailableDay } from "@/lib/availability/compute";
 import { DateCarousel } from "@/components/booking/date-carousel";
 import { TimeSlotGrid } from "@/components/booking/time-slot-grid";
+import { getPreferredHairdresserId } from "@/lib/preferences/queries";
+import { togglePreferredHairdresser } from "@/lib/preferences/actions";
 
 export default async function ChooseServiceAndTimePage({
   params,
@@ -23,7 +25,7 @@ export default async function ChooseServiceAndTimePage({
 
   const { data: hairdresser } = await supabase
     .from("hairdressers")
-    .select("id, display_name, avatar_url")
+    .select("id, display_name, avatar_url, instagram_handle")
     .eq("id", hairdresserId)
     .eq("organization_id", organization.id)
     .eq("active", true)
@@ -32,12 +34,15 @@ export default async function ChooseServiceAndTimePage({
 
   const { data: offeredServices } = await supabase
     .from("hairdresser_services")
-    .select("services!inner(id, name, duration_minutes)")
+    .select("services!inner(id, name, duration_minutes, price_cents)")
     .eq("hairdresser_id", hairdresserId);
 
   const services = (offeredServices ?? [])
     .map((row) => (Array.isArray(row.services) ? row.services[0] : row.services))
-    .filter((s): s is { id: string; name: string; duration_minutes: number } => !!s);
+    .filter(
+      (s): s is { id: string; name: string; duration_minutes: number; price_cents: number | null } =>
+        !!s,
+    );
 
   if (services.length === 0) {
     return (
@@ -59,16 +64,36 @@ export default async function ChooseServiceAndTimePage({
 
   const { serviceId: requestedServiceId, date: requestedDate } = await searchParams;
   const service = services.find((s) => s.id === requestedServiceId) ?? services[0];
-  const today = DateTime.now().setZone(organization.timezone).toISODate();
-  const date = requestedDate ?? today ?? "2026-01-01";
-
-  const slots = await computeDaySchedule(supabase, {
+  const today = DateTime.now().setZone(organization.timezone).toISODate() as string;
+  const scheduleParams = {
     hairdresserId,
-    date,
     timeZone: organization.timezone,
     serviceDurationMinutes: service.duration_minutes,
     bookingIntervalMinutes: organization.bookingIntervalMinutes,
-  });
+  };
+
+  // No date picked yet: open on the first day with a free slot instead of
+  // landing on "Chiuso" when today is Sunday or already full.
+  const firstFree = requestedDate
+    ? null
+    : await findFirstAvailableDay(supabase, { ...scheduleParams, fromDate: today, days: 7 });
+  const date = requestedDate ?? firstFree?.date ?? today;
+  const slots = firstFree?.slots ?? (await computeDaySchedule(supabase, { ...scheduleParams, date }));
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const [preferredId, { data: waitlistEntry }] = await Promise.all([
+    getPreferredHairdresserId(organization.id),
+    supabase
+      .from("waitlist_entries")
+      .select("id")
+      .eq("customer_profile_id", user?.id ?? "")
+      .eq("hairdresser_id", hairdresserId)
+      .eq("date", date)
+      .maybeSingle(),
+  ]);
+  const isPreferred = preferredId === hairdresserId;
 
   return (
     <div className="p-6 flex flex-col gap-4">
@@ -87,14 +112,38 @@ export default async function ChooseServiceAndTimePage({
             {hairdresser.display_name.slice(0, 1)}
           </div>
         )}
-        <h1 className="text-lg font-semibold">{hairdresser.display_name}</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg font-semibold">{hairdresser.display_name}</h1>
+          {hairdresser.instagram_handle && (
+            <a
+              href={`https://instagram.com/${hairdresser.instagram_handle}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-xs text-paper-50/60 underline underline-offset-2 truncate"
+            >
+              @{hairdresser.instagram_handle}
+            </a>
+          )}
+        </div>
+        <form action={togglePreferredHairdresser.bind(null, hairdresserId)}>
+          <button
+            type="submit"
+            aria-pressed={isPreferred}
+            className={`h-11 px-3 rounded-full border text-sm font-medium flex items-center gap-1.5 active:scale-[0.96] transition-transform ${
+              isPreferred ? "bg-accent border-accent text-paper-50" : "border-paper-50/25 text-paper-50/80"
+            }`}
+          >
+            <span aria-hidden>{isPreferred ? "★" : "☆"}</span>
+            {isPreferred ? "Il mio barbiere" : "Imposta come mio"}
+          </button>
+        </form>
       </div>
 
       <Link
         href={`/app/book/${hairdresserId}/recurring`}
         className="rounded-md bg-ink-900 border border-paper-50/15 p-3 flex items-center gap-3 hover:border-accent transition-[border-color,transform] active:scale-[0.98]"
       >
-        <span className="w-10 h-10 shrink-0 rounded-full bg-accent/15 text-accent flex items-center justify-center text-lg">
+        <span className="w-10 h-10 shrink-0 rounded-full bg-accent/25 text-paper-50 flex items-center justify-center text-lg">
           ↻
         </span>
         <span>
@@ -103,18 +152,25 @@ export default async function ChooseServiceAndTimePage({
         </span>
       </Link>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2 overflow-x-auto snap-x -mx-6 px-6 scroll-pl-6 no-scrollbar">
         {services.map((s) => (
           <Link
             key={s.id}
             href={`?serviceId=${s.id}&date=${date}`}
-            className={`h-10 px-3 rounded-md border flex items-center text-sm ${
+            replace
+            scroll={false}
+            aria-current={s.id === service.id ? "true" : undefined}
+            className={`shrink-0 snap-start min-h-11 px-3 py-1.5 rounded-md border flex flex-col justify-center text-left ${
               s.id === service.id
                 ? "border-accent bg-accent text-paper-50"
                 : "bg-ink-900 border-paper-50/15"
             }`}
           >
-            {s.name} ({s.duration_minutes}min)
+            <span className="text-sm font-medium leading-tight">{s.name}</span>
+            <span className={`text-xs ${s.id === service.id ? "text-paper-50/80" : "text-paper-50/50"}`}>
+              {s.duration_minutes} min
+              {s.price_cents != null && ` · €${(s.price_cents / 100).toFixed(2).replace(".", ",")}`}
+            </span>
           </Link>
         ))}
       </div>
@@ -128,6 +184,7 @@ export default async function ChooseServiceAndTimePage({
         serviceId={service.id}
         dateKey={date}
         dateLabel={DateTime.fromISO(date, { zone: organization.timezone }).toFormat("cccc d LLLL")}
+        onWaitlist={!!waitlistEntry}
       />
     </div>
   );

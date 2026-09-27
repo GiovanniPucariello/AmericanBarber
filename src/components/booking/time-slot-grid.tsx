@@ -2,6 +2,7 @@ import Link from "next/link";
 import { DateTime } from "luxon";
 import type { DaySlot } from "@/lib/availability/compute";
 import { DayPanel } from "@/components/calendar/day-panel";
+import { joinWaitlist, leaveWaitlist } from "@/lib/waitlist/actions";
 
 // Big touch targets; taken slots render disabled and visually distinct
 // rather than disappearing, so "closed today" reads differently from
@@ -14,6 +15,7 @@ export function TimeSlotGrid({
   serviceId,
   dateKey,
   dateLabel,
+  onWaitlist,
 }: {
   slots: DaySlot[];
   timeZone: string;
@@ -21,6 +23,7 @@ export function TimeSlotGrid({
   serviceId: string;
   dateKey: string;
   dateLabel: string;
+  onWaitlist: boolean;
 }) {
   if (slots.length === 0) {
     return (
@@ -30,8 +33,38 @@ export function TimeSlotGrid({
     );
   }
 
+  const fullyBooked = !slots.some((slot) => slot.available);
+
   return (
     <DayPanel dateKey={dateKey} label={dateLabel}>
+      {fullyBooked && (
+        <div className="mb-3 rounded-lg bg-ink-900 border border-paper-50/15 p-4 flex flex-col gap-3">
+          <div>
+            <p className="font-medium">Tutto pieno in questo giorno</p>
+            <p className="text-sm text-paper-50/60">
+              {onWaitlist
+                ? "Ti avviseremo appena si libera un posto."
+                : "Se qualcuno annulla, ti mandiamo una notifica."}
+            </p>
+          </div>
+          {onWaitlist ? (
+            <form action={leaveWaitlist.bind(null, hairdresserId, dateKey)}>
+              <button type="submit" className="h-11 w-full rounded-md border border-paper-50/25 text-sm font-medium">
+                Non avvisarmi più
+              </button>
+            </form>
+          ) : (
+            <form action={joinWaitlist.bind(null, hairdresserId, dateKey)}>
+              <button
+                type="submit"
+                className="h-12 w-full rounded-md bg-accent text-paper-50 font-semibold active:scale-[0.98] transition-transform"
+              >
+                Avvisami se si libera
+              </button>
+            </form>
+          )}
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-2">
         {slots.map((slot) => {
           const label = DateTime.fromISO(slot.startUtc, { zone: "utc" })

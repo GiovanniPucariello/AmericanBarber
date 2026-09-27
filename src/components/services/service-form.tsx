@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { ServiceActionState } from "@/lib/services/actions";
+import { FormError } from "@/components/ui/form-error";
 
 const initialState: ServiceActionState = { error: null };
 
@@ -73,7 +74,7 @@ export function ServiceForm({
         />
       </label>
 
-      {state.error && <p className="text-accent text-sm">{state.error}</p>}
+      <FormError message={state.error} />
 
       <button
         type="submit"
