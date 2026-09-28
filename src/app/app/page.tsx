@@ -15,6 +15,8 @@ import { getPreferredHairdresserId } from "@/lib/preferences/queries";
 // Consumer-oriented home (section 40) - not a "Dashboard". Structure:
 // welcome -> next appointment -> "Il solito?" one-tap rebook -> book CTA ->
 // recurring prompt.
+const WEEKDAYS = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"];
+
 export default async function AppHome() {
   const organization = await getCurrentOrganization();
   if (!organization) {
@@ -135,6 +137,28 @@ export default async function AppHome() {
           days: 7,
         })
       : null;
+  // Recurring series: active ones with their next dates, plus requests
+  // still waiting for the barber (skipping requests whose end date passed).
+  const { data: seriesRows } = await supabase
+    .from("recurring_bookings")
+    .select("id, status, weekday, start_time, interval_weeks, ends_on, hairdressers(display_name), services(name)")
+    .eq("customer_profile_id", user?.id ?? "")
+    .in("status", ["active", "pending_approval"])
+    .order("requested_at", { ascending: false });
+  const todayIso = todayLocal.toISODate() as string;
+  const series = (seriesRows ?? []).filter((r) => !r.ends_on || r.ends_on >= todayIso);
+  const activeIds = series.filter((r) => r.status === "active").map((r) => r.id);
+  const { data: seriesOccurrences } = activeIds.length
+    ? await supabase
+        .from("recurring_booking_occurrences")
+        .select("recurring_booking_id, occurrence_date, appointment_id")
+        .in("recurring_booking_id", activeIds)
+        .in("status", ["scheduled", "confirmed"])
+        .gte("occurrence_date", todayIso)
+        .order("occurrence_date")
+    : { data: [] };
+  const seriesAppointmentIds = new Set((seriesOccurrences ?? []).map((o) => o.appointment_id));
+
   const usualSlot = usual?.slots.find((slot) => slot.available) ?? null;
   const usualStart = usualSlot ? DateTime.fromISO(usualSlot.startUtc, { zone: "utc" }).setZone(tz) : null;
   const usualDayLabel = usualStart ? relativeDayLabel(usualStart, todayLocal) : null;
@@ -161,7 +185,14 @@ export default async function AppHome() {
                 {nextHairdresser?.display_name} · {nextService?.name}
               </p>
             </div>
-            <span className="text-paper-50/40 text-sm shrink-0">Dettagli</span>
+            <span className="text-paper-50/40 text-sm shrink-0 text-right">
+              {seriesAppointmentIds.has(upcoming.id) && (
+                <span className="block mb-1 h-6 px-2 rounded-full border border-paper-50/30 text-xs text-paper-50/80 inline-flex items-center">
+                  Serie
+                </span>
+              )}
+              <span className="block">Dettagli</span>
+            </span>
           </Link>
         ) : (
           <div className="rounded-lg bg-ink-900 border border-paper-50/15 border-dashed p-4">
@@ -216,6 +247,60 @@ export default async function AppHome() {
               Altri orari
             </Link>
           </div>
+        </section>
+      )}
+
+      {series.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm text-paper-50/60">Le tue serie</h2>
+          {series.map((r) => {
+            const hairdresser = Array.isArray(r.hairdressers) ? r.hairdressers[0] : r.hairdressers;
+            const service = Array.isArray(r.services) ? r.services[0] : r.services;
+            const next = (seriesOccurrences ?? []).filter((o) => o.recurring_booking_id === r.id).slice(0, 4);
+            const pendingApproval = r.status === "pending_approval";
+            return (
+              <Link
+                key={r.id}
+                href="/app/appointments/recurring"
+                className={`rounded-lg bg-ink-900 border p-4 flex flex-col gap-2 active:scale-[0.99] transition-transform ${
+                  pendingApproval ? "border-dashed border-paper-50/25" : "border-paper-50/15"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">
+                      {r.interval_weeks === 1 ? "Ogni settimana" : `Ogni ${r.interval_weeks} settimane`},{" "}
+                      {WEEKDAYS[r.weekday]} alle {r.start_time.slice(0, 5)}
+                    </p>
+                    <p className="text-sm text-paper-50/70">
+                      {service?.name} con {hairdresser?.display_name}
+                    </p>
+                  </div>
+                  {pendingApproval && (
+                    <span className="shrink-0 h-6 px-2 rounded-full border border-paper-50/30 text-xs text-paper-50/80 flex items-center">
+                      In attesa
+                    </span>
+                  )}
+                </div>
+                {pendingApproval ? (
+                  <p className="text-xs text-paper-50/50">Il barbiere deve ancora approvarla.</p>
+                ) : next.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {next.map((o) => (
+                      <span
+                        key={o.occurrence_date}
+                        className="h-7 px-2.5 rounded-full bg-ink-800 border border-paper-50/15 text-xs tabular-nums flex items-center"
+                      >
+                        {DateTime.fromISO(o.occurrence_date, { zone: tz }).toFormat("d LLL")}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-paper-50/50">Nessuna data futura programmata.</p>
+                )}
+              </Link>
+            );
+          })}
         </section>
       )}
 

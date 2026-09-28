@@ -50,6 +50,15 @@ export default async function AppointmentsPage() {
   // Most recent first - nobody scrolls past last year to find last week.
   const past = rows.filter((r) => r.isPast).reverse();
 
+  // Which upcoming appointments belong to a recurring series.
+  const { data: seriesLinks } = upcoming.length
+    ? await supabase
+        .from("recurring_booking_occurrences")
+        .select("appointment_id")
+        .in("appointment_id", upcoming.map((r) => r.id))
+    : { data: [] };
+  const inSeries = new Set((seriesLinks ?? []).map((l) => l.appointment_id));
+
   const unreadCounts = user
     ? await getUnreadMessageCounts(supabase, upcoming.map((r) => r.id), user.id)
     : new Map<string, number>();
@@ -95,6 +104,7 @@ export default async function AppointmentsPage() {
                       {a.hairdresser?.display_name} · {a.service?.name}
                     </p>
                   </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
                   <span
                     className={`shrink-0 h-6 px-2 rounded-full text-xs font-medium flex items-center ${
                       a.status === "confirmed"
@@ -104,6 +114,12 @@ export default async function AppointmentsPage() {
                   >
                     {STATUS_LABELS[a.status] ?? a.status}
                   </span>
+                  {inSeries.has(a.id) && (
+                    <span className="shrink-0 h-6 px-2 rounded-full border border-paper-50/30 text-xs text-paper-50/80 flex items-center">
+                      Serie
+                    </span>
+                  )}
+                  </div>
                 </div>
                 {active && (
                   <div className="flex flex-col gap-2 border-t border-paper-50/10 pt-3">
