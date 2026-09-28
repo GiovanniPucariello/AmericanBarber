@@ -29,7 +29,7 @@ export default function PrivacyPage() {
 
         <Section title="Quali dati raccogliamo">
           <ul className="list-disc pl-5 flex flex-col gap-1">
-            <li>Nome, email e, se lo inserisci, numero di telefono.</li>
+            <li>Nome, email e, se lo inserisci, numero di telefono (visibile solo allo staff del negozio).</li>
             <li>Appuntamenti prenotati, annullati e prenotazioni ricorrenti.</li>
             <li>Messaggi scambiati con il barbiere su un appuntamento.</li>
             <li>Barbiere preferito e richieste &quot;avvisami se si libera&quot;.</li>

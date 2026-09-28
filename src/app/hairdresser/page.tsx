@@ -10,6 +10,7 @@ import { monthGridRangeIso } from "@/lib/calendar/month-grid";
 import { MonthCalendar } from "@/components/calendar/month-calendar";
 import { DayPanel } from "@/components/calendar/day-panel";
 import { getUnreadMessageCounts } from "@/lib/messages/queries";
+import { relativeDayLabel } from "@/lib/calendar/relative-day";
 
 // Day schedule (section 42/43): a plain chronological list, real
 // appointments interleaved with "AVAILABLE" gaps, for whichever day is
@@ -55,7 +56,10 @@ export default async function HairdresserAgendaPage({
   const { startIso, endIso } = monthGridRangeIso(date, organization.timezone);
   const monthRangeLiteral = `[${DateTime.fromISO(startIso, { zone: organization.timezone }).toISO()},${DateTime.fromISO(endIso, { zone: organization.timezone }).toISO()})`;
 
-  const [openWindows, appointmentsRes, requestsCountRes, monthAppointmentsRes] = await Promise.all([
+  const todayStartLocal = DateTime.now().setZone(organization.timezone).startOf("day");
+  const weekRangeLiteral = `[${todayStartLocal.toISO()},${todayStartLocal.plus({ days: 7 }).toISO()})`;
+
+  const [openWindows, appointmentsRes, requestsCountRes, monthAppointmentsRes, weekRes] = await Promise.all([
     computeOpenWindows(supabase, {
       hairdresserId: hairdresser.id,
       date,
@@ -78,7 +82,29 @@ export default async function HairdresserAgendaPage({
       .eq("hairdresser_id", hairdresser.id)
       .in("status", ["pending", "confirmed"])
       .overlaps("during", monthRangeLiteral),
+    supabase
+      .from("appointments")
+      .select("id, during, customer_profile_id, services(name)")
+      .eq("hairdresser_id", hairdresser.id)
+      .in("status", ["pending", "confirmed"])
+      .overlaps("during", weekRangeLiteral),
   ]);
+
+  // Dashboard: today's load split morning/afternoon, the next client, and
+  // the week ahead - what a barber checks between cuts.
+  const nowMs = Date.now();
+  const tz = organization.timezone;
+  const week = (weekRes.data ?? [])
+    .map((a) => {
+      const { start } = parseRange(a.during as string);
+      const service = Array.isArray(a.services) ? a.services[0] : a.services;
+      return { id: a.id, start, customerProfileId: a.customer_profile_id, serviceName: service?.name ?? "" };
+    })
+    .sort((x, y) => x.start - y.start);
+  const todayEndMs = todayStartLocal.plus({ days: 1 }).toMillis();
+  const todayList = week.filter((a) => a.start >= todayStartLocal.toMillis() && a.start < todayEndMs);
+  const morningCount = todayList.filter((a) => DateTime.fromMillis(a.start, { zone: tz }).hour < 13).length;
+  const nextUp = week.find((a) => a.start > nowMs) ?? null;
 
   const todaysAppointments = (appointmentsRes.data ?? [])
     .map((a) => {
@@ -94,7 +120,9 @@ export default async function HairdresserAgendaPage({
     })
     .filter((a) => a.start >= dayStartMs && a.start < dayEndMs);
 
-  const customerIds = [...new Set(todaysAppointments.map((a) => a.customerProfileId))];
+  const customerIds = [
+    ...new Set([...todaysAppointments.map((a) => a.customerProfileId), ...(nextUp ? [nextUp.customerProfileId] : [])]),
+  ];
   const { data: customers } = customerIds.length
     ? await supabase.from("co_member_profiles").select("id, full_name").in("id", customerIds)
     : { data: [] };
@@ -113,6 +141,13 @@ export default async function HairdresserAgendaPage({
     if (!latestNoteByCustomer.has(n.customer_profile_id)) latestNoteByCustomer.set(n.customer_profile_id, n.body);
   }
   const customerIdByAppointment = new Map(todaysAppointments.map((a) => [a.id, a.customerProfileId]));
+  const { data: proposals } = todaysAppointments.length
+    ? await supabase
+        .from("appointment_reschedule_proposals")
+        .select("appointment_id")
+        .in("appointment_id", todaysAppointments.map((a) => a.id))
+    : { data: [] };
+  const pendingReschedule = new Set((proposals ?? []).map((p) => p.appointment_id));
   const unreadCounts = await getUnreadMessageCounts(
     supabase,
     todaysAppointments.map((a) => a.id),
@@ -148,6 +183,57 @@ export default async function HairdresserAgendaPage({
           {DateTime.fromISO(date, { zone: organization.timezone }).toFormat("cccc d LLLL")}
         </p>
       </div>
+
+      <section className="flex flex-col gap-3" aria-label="Riepilogo">
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Oggi", value: todayList.length },
+            { label: "Mattina", value: morningCount },
+            { label: "Pomeriggio", value: todayList.length - morningCount },
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-lg bg-ink-900 border border-paper-50/15 p-3">
+              <p className="text-3xl font-semibold tabular-nums leading-none">{stat.value}</p>
+              <p className="text-xs text-paper-50/60 mt-1">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+        {nextUp ? (
+          <Link
+            href={`/hairdresser/appointments/${nextUp.id}`}
+            className="rounded-lg bg-ink-900 border border-paper-50/15 border-l-4 border-l-accent p-3 flex items-center justify-between gap-3"
+          >
+            <div className="min-w-0">
+              <p className="text-xs text-paper-50/60">Prossimo cliente</p>
+              <p className="font-semibold truncate">
+                {nameById.get(nextUp.customerProfileId) ?? "Cliente"} · {nextUp.serviceName}
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-2xl font-semibold tabular-nums leading-none">
+                {DateTime.fromMillis(nextUp.start, { zone: tz }).toFormat("HH:mm")}
+              </p>
+              <p className="text-xs text-paper-50/60 mt-1">
+                {nextUp.start - nowMs < 60 * 60_000
+                  ? `tra ${Math.max(1, Math.round((nextUp.start - nowMs) / 60_000))} min`
+                  : relativeDayLabel(DateTime.fromMillis(nextUp.start, { zone: tz }), todayStartLocal)}
+              </p>
+            </div>
+          </Link>
+        ) : (
+          <p className="text-sm text-paper-50/60">Nessun cliente nei prossimi 7 giorni.</p>
+        )}
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-paper-50/70">
+            Prossimi 7 giorni: <span className="text-paper-50 font-semibold">{week.length}</span> appuntamenti
+          </p>
+          <a
+            href="/hairdresser/calendar"
+            className="h-11 px-3 rounded-md border border-paper-50/25 text-sm font-medium flex items-center shrink-0"
+          >
+            Aggiungi al calendario
+          </a>
+        </div>
+      </section>
 
       {requestsCount > 0 && (
         <Link
@@ -204,6 +290,11 @@ export default async function HairdresserAgendaPage({
                     {item.customerName}
                   </Link>
                   <p className="text-paper-50/60 text-sm">{item.serviceName}</p>
+                  {pendingReschedule.has(item.id) && (
+                    <p className="text-xs mt-1 inline-flex h-5 px-2 rounded-full border border-accent items-center">
+                      Spostamento proposto, in attesa
+                    </p>
+                  )}
                   {latestNoteByCustomer.get(customerIdByAppointment.get(item.id) ?? "") && (
                     <p className="text-sm text-paper-50/80 mt-1 line-clamp-2">
                       {latestNoteByCustomer.get(customerIdByAppointment.get(item.id) ?? "")}
@@ -211,10 +302,15 @@ export default async function HairdresserAgendaPage({
                   )}
                 </div>
                 <Link
-                  href={`/hairdresser/appointments/${item.id}/messages`}
-                  className="text-sm underline underline-offset-2 shrink-0"
+                  href={`/hairdresser/appointments/${item.id}`}
+                  className="h-11 px-3 rounded-md border border-paper-50/25 text-sm font-medium flex items-center gap-1.5 shrink-0"
                 >
-                  Messaggi{unreadCounts.get(item.id) ? ` (${unreadCounts.get(item.id)})` : ""}
+                  Apri
+                  {unreadCounts.get(item.id) ? (
+                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-paper-50 text-xs font-semibold flex items-center justify-center">
+                      {unreadCounts.get(item.id)}
+                    </span>
+                  ) : null}
                 </Link>
               </li>
             );

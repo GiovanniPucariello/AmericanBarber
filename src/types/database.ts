@@ -75,6 +75,66 @@ export type Database = {
           },
         ]
       }
+      appointment_reschedule_proposals: {
+        Row: {
+          appointment_id: string
+          created_at: string
+          organization_id: string
+          proposed_by: string | null
+          proposed_during: unknown
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string
+          organization_id: string
+          proposed_by?: string | null
+          proposed_during: unknown
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string
+          organization_id?: string
+          proposed_by?: string | null
+          proposed_during?: unknown
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_reschedule_proposals_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_reschedule_proposals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_marketing_profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_reschedule_proposals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_reschedule_proposals_proposed_by_fkey"
+            columns: ["proposed_by"]
+            isOneToOne: false
+            referencedRelation: "co_member_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_reschedule_proposals_proposed_by_fkey"
+            columns: ["proposed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           cancelled_at: string | null
@@ -1337,16 +1397,7 @@ export type Database = {
           avatar_url: string | null
           full_name: string | null
           id: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          full_name?: string | null
-          id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          full_name?: string | null
-          id?: string | null
+          phone: string | null
         }
         Relationships: []
       }
@@ -1443,6 +1494,14 @@ export type Database = {
         Args: { p_slug: string }
         Returns: string
       }
+      propose_appointment_reschedule: {
+        Args: { p_appointment_id: string; p_new_start: string }
+        Returns: undefined
+      }
+      respond_to_appointment_reschedule: {
+        Args: { p_accept: boolean; p_appointment_id: string }
+        Returns: undefined
+      }
       role_rank: {
         Args: { r: Database["public"]["Enums"]["org_role"] }
         Returns: number
@@ -1474,6 +1533,10 @@ export type Database = {
         | "schedule_changed"
         | "message_received"
         | "waitlist_slot_freed"
+        | "reschedule_proposed"
+        | "reschedule_accepted"
+        | "reschedule_declined"
+        | "booking_cancelled_by_hairdresser"
       notification_status: "pending" | "sent" | "failed" | "read"
       org_role: "customer" | "hairdresser" | "manager" | "admin" | "owner"
       recurring_booking_status:
@@ -1644,6 +1707,10 @@ export const Constants = {
         "schedule_changed",
         "message_received",
         "waitlist_slot_freed",
+        "reschedule_proposed",
+        "reschedule_accepted",
+        "reschedule_declined",
+        "booking_cancelled_by_hairdresser",
       ],
       notification_status: ["pending", "sent", "failed", "read"],
       org_role: ["customer", "hairdresser", "manager", "admin", "owner"],

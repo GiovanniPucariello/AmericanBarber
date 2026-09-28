@@ -18,6 +18,15 @@ function authorized(request: Request): boolean {
   );
 }
 
+// Where tapping the push lands: straight to the thing to act on.
+function pushUrl(type: string | null, appointmentId: string | null, basePath: "/app" | "/hairdresser"): string {
+  if (type === "message_received" && appointmentId) return `${basePath}/appointments/${appointmentId}/messages`;
+  if (type === "reschedule_proposed" || type === "reminder_24h") return "/app/appointments";
+  if (type === "waitlist_slot_freed" || type === "booking_cancelled_by_hairdresser") return "/app/book";
+  if (basePath === "/hairdresser" && appointmentId) return `/hairdresser/appointments/${appointmentId}`;
+  return `${basePath}/notifications`;
+}
+
 export async function POST(request: Request) {
   if (!authorized(request)) return new NextResponse("Unauthorized", { status: 401 });
 
@@ -40,7 +49,7 @@ export async function POST(request: Request) {
   const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
 
   const isCustomer = appt?.customer_profile_id === n.recipient_profile_id;
-  const basePath = isCustomer ? "/app" : "/hairdresser";
+  const basePath: "/app" | "/hairdresser" = isCustomer ? "/app" : "/hairdresser";
   let body = summarize(
     {
       event_type: event?.type ?? null,
@@ -59,10 +68,7 @@ export async function POST(request: Request) {
     title: "American Barber Tattoo",
     body,
     // A message opens its chat directly; everything else the notification list.
-    url:
-      event?.type === "message_received" && event.appointment_id
-        ? `${basePath}/appointments/${event.appointment_id}/messages`
-        : `${basePath}/notifications`,
+    url: pushUrl(event?.type ?? null, event?.appointment_id ?? null, basePath),
   });
   return NextResponse.json({ sent });
 }

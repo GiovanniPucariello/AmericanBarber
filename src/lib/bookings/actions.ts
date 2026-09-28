@@ -160,3 +160,71 @@ export async function cancelAppointment(id: string): Promise<void> {
 
   revalidatePath("/app/appointments");
 }
+
+// Barber-side cancel (RLS: own hairdresser may set status). Notifies the
+// customer and wakes anyone on that day's waitlist.
+export async function cancelAppointmentAsHairdresser(id: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: updated } = await supabase
+    .from("appointments")
+    .update({ status: "cancelled", cancelled_at: new Date().toISOString(), cancelled_by: user.id })
+    .eq("id", id)
+    .in("status", ["pending", "confirmed"])
+    .select("id")
+    .maybeSingle();
+  if (!updated) return;
+
+  await supabase.rpc("emit_notification_event", {
+    p_type: "booking_cancelled_by_hairdresser",
+    p_appointment_id: id,
+  });
+  revalidatePath("/hairdresser", "layout");
+}
+
+export type RescheduleState = { error: string | null; done?: boolean };
+
+// Barber proposes a new start; the DB function checks ownership, future
+// times and overlaps, then notifies the customer.
+export async function proposeReschedule(
+  appointmentId: string,
+  startUtc: string,
+): Promise<RescheduleState> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("propose_appointment_reschedule", {
+    p_appointment_id: appointmentId,
+    p_new_start: startUtc,
+  });
+  if (error) {
+    return {
+      error:
+        error.code === EXCLUSION_VIOLATION
+          ? "Quell'orario è già occupato. Scegline un altro."
+          : "Non è stato possibile inviare la proposta. Riprova.",
+    };
+  }
+  revalidatePath("/hairdresser", "layout");
+  return { error: null, done: true };
+}
+
+export async function respondToReschedule(appointmentId: string, accept: boolean): Promise<RescheduleState> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("respond_to_appointment_reschedule", {
+    p_appointment_id: appointmentId,
+    p_accept: accept,
+  });
+  revalidatePath("/app", "layout");
+  if (error) {
+    return {
+      error:
+        error.code === EXCLUSION_VIOLATION
+          ? "Nel frattempo quell'orario è stato preso. Scrivi al barbiere per trovarne un altro."
+          : "La proposta non è più valida.",
+    };
+  }
+  return { error: null, done: true };
+}

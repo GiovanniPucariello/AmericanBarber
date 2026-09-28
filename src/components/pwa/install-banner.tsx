@@ -11,8 +11,8 @@ const DISMISS_KEY = "install-banner-dismissed";
 // programmatically - only the Share button placement differs.
 const STEPS = {
   safari:
-    "Tocca il pulsante Condividi (il quadrato con la freccia in su) in basso - se non lo vedi, è dentro il menu \"···\" - poi \"Aggiungi alla schermata Home\".",
-  // Chrome on iOS hides the action one level down, unlike Safari.
+    "Tocca i tre puntini \"···\" in basso a destra, poi \"Condividi\", poi \"Visualizza altro\" e infine \"Aggiungi alla schermata Home\".",
+  // Chrome on iOS: Share sits in the address bar instead of the ··· menu.
   chrome:
     "Tocca il pulsante Condividi (il quadrato con la freccia in su) nella barra dell'indirizzo in alto a destra, poi \"Visualizza altro\" e infine \"Aggiungi alla schermata Home\".",
   otherIos:

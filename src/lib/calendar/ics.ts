@@ -18,13 +18,8 @@ function escapeText(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
 }
 
-export function buildIcs(event: IcsEvent, now: number = Date.now()): string {
+function veventLines(event: IcsEvent, now: number): string[] {
   const lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//American Barber Tattoo//Booking//IT",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
     "BEGIN:VEVENT",
     `UID:${event.uid}`,
     `DTSTAMP:${utcStamp(now)}`,
@@ -43,7 +38,25 @@ export function buildIcs(event: IcsEvent, now: number = Date.now()): string {
       "END:VALARM",
     );
   }
-  lines.push("END:VEVENT", "END:VCALENDAR");
+  lines.push("END:VEVENT");
+  return lines;
+}
+
+// Several events in one file - importing it adds them all at once.
+export function buildIcsCalendar(events: IcsEvent[], now: number = Date.now()): string {
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//American Barber Tattoo//Booking//IT",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    ...events.flatMap((e) => veventLines(e, now)),
+    "END:VCALENDAR",
+  ];
   // CRLF line endings are required by the spec; some importers reject bare LF.
   return lines.join("\r\n") + "\r\n";
+}
+
+export function buildIcs(event: IcsEvent, now: number = Date.now()): string {
+  return buildIcsCalendar([event], now);
 }

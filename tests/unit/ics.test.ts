@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildIcs } from "@/lib/calendar/ics";
+import { buildIcs, buildIcsCalendar } from "@/lib/calendar/ics";
 
 describe("buildIcs", () => {
   it("formats UTC times, escapes text, adds a reminder and uses CRLF", () => {
@@ -21,5 +21,14 @@ describe("buildIcs", () => {
     expect(ics).toContain("LOCATION:Viale Giuseppe la Torre\\, 304\; Foggia\r\n");
     expect(ics).toContain("TRIGGER:-PT60M\r\n");
     expect(ics.split("\r\n").filter((l) => l.includes("\n"))).toEqual([]);
+  });
+});
+
+describe("buildIcsCalendar", () => {
+  it("wraps several events in one calendar", () => {
+    const ev = (uid: string) => ({ uid, start: 0, end: 60_000, summary: "Taglio" });
+    const ics = buildIcsCalendar([ev("a@t"), ev("b@t")], 0);
+    expect(ics.match(/BEGIN:VEVENT/g)?.length).toBe(2);
+    expect(ics.match(/BEGIN:VCALENDAR/g)?.length).toBe(1);
   });
 });

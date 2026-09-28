@@ -26,6 +26,14 @@ export function summarize(n: NotificationSummaryInput, basePath: "/app" | "/hair
         : `Nuovo messaggio da ${n.customer_name ?? "un cliente"}`;
     case "waitlist_slot_freed":
       return `Si è liberato un posto con ${n.hairdresser_name ?? "il tuo barbiere"} - prenota prima che lo prenda qualcun altro`;
+    case "booking_cancelled_by_hairdresser":
+      return `${n.hairdresser_name ?? "Il barbiere"} ha annullato il tuo appuntamento - prenotane un altro quando vuoi`;
+    case "reschedule_proposed":
+      return `${n.hairdresser_name ?? "Il tuo barbiere"} ti chiede di spostare l'appuntamento - apri per accettare o mantenere l'orario`;
+    case "reschedule_accepted":
+      return `${n.customer_name ?? "Il cliente"} ha accettato lo spostamento`;
+    case "reschedule_declined":
+      return `${n.customer_name ?? "Il cliente"} preferisce mantenere l'orario originale`;
     case "reminder_24h":
       return `Promemoria: domani ${n.service_name ?? "appuntamento"} con ${n.hairdresser_name ?? "il tuo barbiere"}`;
     default:

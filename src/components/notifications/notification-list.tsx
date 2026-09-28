@@ -51,6 +51,21 @@ export function NotificationList({
                   >
                     {summarize(n, basePath)}
                   </Link>
+                ) : n.event_type === "reschedule_proposed" && basePath === "/app" ? (
+                  <Link
+                    href="/app/appointments"
+                    className={`underline underline-offset-2 ${unread ? "font-medium" : "text-paper-50/70"}`}
+                  >
+                    {summarize(n, basePath)}
+                  </Link>
+                ) : (n.event_type === "reschedule_accepted" || n.event_type === "reschedule_declined") &&
+                  n.appointment_id ? (
+                  <Link
+                    href={`/hairdresser/appointments/${n.appointment_id}`}
+                    className={`underline underline-offset-2 ${unread ? "font-medium" : "text-paper-50/70"}`}
+                  >
+                    {summarize(n, basePath)}
+                  </Link>
                 ) : n.event_type === "waitlist_slot_freed" ? (
                   <Link
                     href="/app/book"

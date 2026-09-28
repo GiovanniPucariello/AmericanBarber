@@ -19,7 +19,15 @@ function ConfirmButton() {
 
 // Two taps, not one: cancelling notifies the barber and frees the slot for
 // someone else, so a stray tap on a phone shouldn't be enough.
-export function CancelAppointmentButton({ appointmentId }: { appointmentId: string }) {
+export function CancelAppointmentButton({
+  appointmentId,
+  cancelAction = cancelAppointment,
+  question = "Annullare l'appuntamento?",
+}: {
+  appointmentId: string;
+  cancelAction?: (id: string) => Promise<void>;
+  question?: string;
+}) {
   const [confirming, setConfirming] = useState(false);
 
   if (!confirming) {
@@ -36,10 +44,10 @@ export function CancelAppointmentButton({ appointmentId }: { appointmentId: stri
 
   return (
     <form
-      action={cancelAppointment.bind(null, appointmentId)}
+      action={cancelAction.bind(null, appointmentId)}
       className="flex items-center gap-2 animate-fade-in"
     >
-      <span className="text-sm text-paper-50/70 mr-auto">Annullare l&apos;appuntamento?</span>
+      <span className="text-sm text-paper-50/70 mr-auto">{question}</span>
       <button
         type="button"
         onClick={() => setConfirming(false)}

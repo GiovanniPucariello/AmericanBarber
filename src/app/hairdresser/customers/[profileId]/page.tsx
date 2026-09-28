@@ -22,7 +22,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ profi
   } = await supabase.auth.getUser();
 
   const [{ data: customer }, { data: notes }, { data: visits }] = await Promise.all([
-    supabase.from("co_member_profiles").select("id, full_name").eq("id", profileId).maybeSingle(),
+    supabase.from("co_member_profiles").select("id, full_name, phone").eq("id", profileId).maybeSingle(),
     supabase
       .from("customer_notes")
       .select("id, body, created_at, author_profile_id")
@@ -49,6 +49,11 @@ export default async function CustomerPage({ params }: { params: Promise<{ profi
           Agenda
         </Link>
         <h1 className="text-2xl font-bold tracking-tight mt-1">{customer.full_name ?? "Cliente"}</h1>
+        {customer.phone && (
+          <a href={`tel:${customer.phone.replace(/\s/g, "")}`} className="mt-2 h-11 px-4 rounded-md border border-paper-50/25 text-sm font-medium inline-flex items-center">
+            Chiama {customer.phone}
+          </a>
+        )}
       </div>
 
       <section className="flex flex-col gap-3">

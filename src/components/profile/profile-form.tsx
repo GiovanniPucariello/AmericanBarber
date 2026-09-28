@@ -32,7 +32,7 @@ export function ProfileForm({ fullName, phone }: { fullName: string; phone: stri
           placeholder="+39 333 123 4567"
           className={inputClass}
         />
-        <span className="text-xs text-paper-50/50">Facoltativo.</span>
+        <span className="text-xs text-paper-50/50">Facoltativo. Lo vede solo lo staff del negozio, per avvisarti in caso di imprevisti.</span>
       </label>
 
       <FormError message={state.error} />
