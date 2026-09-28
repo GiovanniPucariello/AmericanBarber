@@ -12,7 +12,7 @@ import { RescheduleSlots } from "@/components/appointments/reschedule-slots";
 import { DateCarousel } from "@/components/booking/date-carousel";
 
 // Barber's view of one appointment: who, when, how to reach them, and the
-// two changes a barber can make - propose a new time, or cancel.
+// two changes a barber can make - move it, or cancel.
 export default async function HairdresserAppointmentPage({
   params,
   searchParams,
@@ -43,21 +43,11 @@ export default async function HairdresserAppointmentPage({
   const service = Array.isArray(appointment.services) ? appointment.services[0] : appointment.services;
   const active = ["pending", "confirmed"].includes(appointment.status) && start > Date.now();
 
-  const [{ data: customer }, { data: proposal }] = await Promise.all([
-    supabase
-      .from("co_member_profiles")
-      .select("id, full_name, phone")
-      .eq("id", appointment.customer_profile_id)
-      .maybeSingle(),
-    supabase
-      .from("appointment_reschedule_proposals")
-      .select("proposed_during")
-      .eq("appointment_id", id)
-      .maybeSingle(),
-  ]);
-  const proposedStart = proposal
-    ? DateTime.fromMillis(parseRange(proposal.proposed_during as string).start, { zone: "utc" }).setZone(tz)
-    : null;
+  const { data: customer } = await supabase
+    .from("co_member_profiles")
+    .select("id, full_name, phone")
+    .eq("id", appointment.customer_profile_id)
+    .maybeSingle();
 
   const { date: requestedDate } = await searchParams;
   const date = requestedDate ?? (startLocal.toISODate() as string);
@@ -114,15 +104,9 @@ export default async function HairdresserAppointmentPage({
           <div>
             <h2 className="font-semibold">Sposta appuntamento</h2>
             <p className="text-sm text-paper-50/60">
-              Scegli un nuovo orario: il cliente riceve la proposta e decide se accettare.
+              Scegli il giorno e un orario libero: il cliente riceve una notifica.
             </p>
           </div>
-          {proposedStart && (
-            <p className="rounded-md border border-accent bg-accent/15 p-3 text-sm">
-              In attesa del cliente: proposto <span className="capitalize">{proposedStart.toFormat("cccc d LLLL")}</span> alle{" "}
-              {proposedStart.toFormat("HH:mm")}. Una nuova scelta sostituisce questa proposta.
-            </p>
-          )}
           <DateCarousel timeZone={tz} selectedDate={date} serviceId={appointment.service_id} />
           <RescheduleSlots key={date} appointmentId={id} slots={freeSlots} />
         </section>

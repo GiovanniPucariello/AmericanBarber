@@ -6,7 +6,8 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 const NAV_ITEMS: NavItem[] = [
   { href: "/hairdresser", label: "Agenda", icon: "calendar", exact: true },
   { href: "/hairdresser/requests", label: "Richieste", icon: "inbox" },
-  { href: "/hairdresser/availability", label: "Disponibilità", icon: "clock" },
+  { href: "/hairdresser/customers", label: "Clienti", icon: "users" },
+  { href: "/hairdresser/availability", label: "Orari", icon: "clock" },
   { href: "/hairdresser/profile", label: "Profilo", icon: "user" },
 ];
 

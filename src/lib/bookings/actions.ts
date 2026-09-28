@@ -188,14 +188,15 @@ export async function cancelAppointmentAsHairdresser(id: string): Promise<void> 
 
 export type RescheduleState = { error: string | null; done?: boolean };
 
-// Barber proposes a new start; the DB function checks ownership, future
-// times and overlaps, then notifies the customer.
-export async function proposeReschedule(
+// The barber moves the appointment directly; the DB function checks
+// ownership and future times, the exclusion constraint rejects overlaps,
+// and the customer is notified (plus the old slot's waitlist).
+export async function rescheduleAppointment(
   appointmentId: string,
   startUtc: string,
 ): Promise<RescheduleState> {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("propose_appointment_reschedule", {
+  const { error } = await supabase.rpc("reschedule_appointment", {
     p_appointment_id: appointmentId,
     p_new_start: startUtc,
   });
@@ -204,27 +205,9 @@ export async function proposeReschedule(
       error:
         error.code === EXCLUSION_VIOLATION
           ? "Quell'orario è già occupato. Scegline un altro."
-          : "Non è stato possibile inviare la proposta. Riprova.",
+          : "Non è stato possibile spostare l'appuntamento. Riprova.",
     };
   }
   revalidatePath("/hairdresser", "layout");
-  return { error: null, done: true };
-}
-
-export async function respondToReschedule(appointmentId: string, accept: boolean): Promise<RescheduleState> {
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("respond_to_appointment_reschedule", {
-    p_appointment_id: appointmentId,
-    p_accept: accept,
-  });
-  revalidatePath("/app", "layout");
-  if (error) {
-    return {
-      error:
-        error.code === EXCLUSION_VIOLATION
-          ? "Nel frattempo quell'orario è stato preso. Scrivi al barbiere per trovarne un altro."
-          : "La proposta non è più valida.",
-    };
-  }
   return { error: null, done: true };
 }

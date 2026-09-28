@@ -21,7 +21,7 @@ function authorized(request: Request): boolean {
 // Where tapping the push lands: straight to the thing to act on.
 function pushUrl(type: string | null, appointmentId: string | null, basePath: "/app" | "/hairdresser"): string {
   if (type === "message_received" && appointmentId) return `${basePath}/appointments/${appointmentId}/messages`;
-  if (type === "reschedule_proposed" || type === "reminder_24h") return "/app/appointments";
+  if (type === "schedule_changed" || type === "reminder_24h") return "/app/appointments";
   if (type === "waitlist_slot_freed" || type === "booking_cancelled_by_hairdresser") return "/app/book";
   if (basePath === "/hairdresser" && appointmentId) return `/hairdresser/appointments/${appointmentId}`;
   return `${basePath}/notifications`;

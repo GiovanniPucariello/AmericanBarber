@@ -141,13 +141,7 @@ export default async function HairdresserAgendaPage({
     if (!latestNoteByCustomer.has(n.customer_profile_id)) latestNoteByCustomer.set(n.customer_profile_id, n.body);
   }
   const customerIdByAppointment = new Map(todaysAppointments.map((a) => [a.id, a.customerProfileId]));
-  const { data: proposals } = todaysAppointments.length
-    ? await supabase
-        .from("appointment_reschedule_proposals")
-        .select("appointment_id")
-        .in("appointment_id", todaysAppointments.map((a) => a.id))
-    : { data: [] };
-  const pendingReschedule = new Set((proposals ?? []).map((p) => p.appointment_id));
+
   const unreadCounts = await getUnreadMessageCounts(
     supabase,
     todaysAppointments.map((a) => a.id),
@@ -290,11 +284,6 @@ export default async function HairdresserAgendaPage({
                     {item.customerName}
                   </Link>
                   <p className="text-paper-50/60 text-sm">{item.serviceName}</p>
-                  {pendingReschedule.has(item.id) && (
-                    <p className="text-xs mt-1 inline-flex h-5 px-2 rounded-full border border-accent items-center">
-                      Spostamento proposto, in attesa
-                    </p>
-                  )}
                   {latestNoteByCustomer.get(customerIdByAppointment.get(item.id) ?? "") && (
                     <p className="text-sm text-paper-50/80 mt-1 line-clamp-2">
                       {latestNoteByCustomer.get(customerIdByAppointment.get(item.id) ?? "")}

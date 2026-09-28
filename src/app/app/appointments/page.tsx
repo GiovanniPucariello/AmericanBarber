@@ -4,7 +4,6 @@ import { DateTime } from "luxon";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrganization } from "@/lib/organizations/queries";
 import { NavIcon } from "@/components/layout/nav-icon";
-import { RescheduleResponse } from "@/components/appointments/reschedule-response";
 import { CancelAppointmentButton } from "@/components/appointments/cancel-appointment-button";
 import { parseRange } from "@/lib/availability/intervals";
 import { getUnreadMessageCounts } from "@/lib/messages/queries";
@@ -50,21 +49,6 @@ export default async function AppointmentsPage() {
   const upcoming = rows.filter((r) => !r.isPast);
   // Most recent first - nobody scrolls past last year to find last week.
   const past = rows.filter((r) => r.isPast).reverse();
-
-  const { data: proposals } = upcoming.length
-    ? await supabase
-        .from("appointment_reschedule_proposals")
-        .select("appointment_id, proposed_during")
-        .in("appointment_id", upcoming.map((r) => r.id))
-    : { data: [] };
-  const proposalById = new Map(
-    (proposals ?? []).map((p) => {
-      const t = DateTime.fromMillis(parseRange(p.proposed_during as string).start, { zone: "utc" }).setZone(
-        organization.timezone,
-      );
-      return [p.appointment_id, `${t.toFormat("cccc d LLLL")} alle ${t.toFormat("HH:mm")}`];
-    }),
-  );
 
   const unreadCounts = user
     ? await getUnreadMessageCounts(supabase, upcoming.map((r) => r.id), user.id)
@@ -121,13 +105,6 @@ export default async function AppointmentsPage() {
                     {STATUS_LABELS[a.status] ?? a.status}
                   </span>
                 </div>
-                {active && proposalById.has(a.id) && (
-                  <RescheduleResponse
-                    appointmentId={a.id}
-                    hairdresserName={a.hairdresser?.display_name ?? "Il barbiere"}
-                    proposedLabel={proposalById.get(a.id)!}
-                  />
-                )}
                 {active && (
                   <div className="flex flex-col gap-2 border-t border-paper-50/10 pt-3">
                     <Link

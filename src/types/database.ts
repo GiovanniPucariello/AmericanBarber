@@ -75,66 +75,6 @@ export type Database = {
           },
         ]
       }
-      appointment_reschedule_proposals: {
-        Row: {
-          appointment_id: string
-          created_at: string
-          organization_id: string
-          proposed_by: string | null
-          proposed_during: unknown
-        }
-        Insert: {
-          appointment_id: string
-          created_at?: string
-          organization_id: string
-          proposed_by?: string | null
-          proposed_during: unknown
-        }
-        Update: {
-          appointment_id?: string
-          created_at?: string
-          organization_id?: string
-          proposed_by?: string | null
-          proposed_during?: unknown
-        }
-        Relationships: [
-          {
-            foreignKeyName: "appointment_reschedule_proposals_appointment_id_fkey"
-            columns: ["appointment_id"]
-            isOneToOne: true
-            referencedRelation: "appointments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointment_reschedule_proposals_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organization_marketing_profile"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointment_reschedule_proposals_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointment_reschedule_proposals_proposed_by_fkey"
-            columns: ["proposed_by"]
-            isOneToOne: false
-            referencedRelation: "co_member_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointment_reschedule_proposals_proposed_by_fkey"
-            columns: ["proposed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       appointments: {
         Row: {
           cancelled_at: string | null
@@ -1397,6 +1337,7 @@ export type Database = {
           avatar_url: string | null
           full_name: string | null
           id: string | null
+          is_customer: boolean | null
           phone: string | null
         }
         Relationships: []
@@ -1494,12 +1435,18 @@ export type Database = {
         Args: { p_slug: string }
         Returns: string
       }
-      propose_appointment_reschedule: {
-        Args: { p_appointment_id: string; p_new_start: string }
+      notify_waitlist_for_freed_slot: {
+        Args: {
+          p_appointment_id: string
+          p_exclude_profile_id: string
+          p_freed_during: unknown
+          p_hairdresser_id: string
+          p_organization_id: string
+        }
         Returns: undefined
       }
-      respond_to_appointment_reschedule: {
-        Args: { p_accept: boolean; p_appointment_id: string }
+      reschedule_appointment: {
+        Args: { p_appointment_id: string; p_new_start: string }
         Returns: undefined
       }
       role_rank: {
