@@ -9,6 +9,7 @@ import Link from "next/link";
 import { getCurrentOrganization } from "@/lib/organizations/queries";
 import { getPreferredHairdresserId } from "@/lib/preferences/queries";
 import { setPreferredHairdresser } from "@/lib/preferences/actions";
+import { NavIcon } from "@/components/layout/nav-icon";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -75,9 +76,7 @@ export default async function ProfilePage() {
                   </span>
                 )}
                 <span className="flex-1 font-medium">{h.display_name}</span>
-                <span aria-hidden className={selected ? "text-paper-50" : "text-paper-50/30"}>
-                  {selected ? "★" : "☆"}
-                </span>
+                <NavIcon name="star" className={`w-5 h-5 ${selected ? "fill-current text-paper-50" : "text-paper-50/30"}`} />
               </button>
             );
           })}

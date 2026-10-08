@@ -4,8 +4,10 @@ import Link from "next/link";
 // root layout keeps it off every other route's render-blocking CSS.
 import "@fontsource/pirata-one/400.css";
 import { createPublicClient } from "@/lib/supabase/public";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { NavIcon } from "@/components/layout/nav-icon";
 import { getPublicOrganization } from "@/lib/organizations/queries";
-import { BusinessInfo } from "@/components/info/business-info";
+import { ADDRESS, BusinessInfo } from "@/components/info/business-info";
 
 // Real but slow-changing data (org name, service list/prices) - ISR instead
 // of making the whole page dynamic per request (section 61, caching).
@@ -13,30 +15,10 @@ export const revalidate = 3600;
 
 const DEFAULT_ORG_SLUG = process.env.DEFAULT_ORG_SLUG;
 
-const VALUE_PROPS = [
-  {
-    title: "Mai una doppia prenotazione",
-    body: "È il database stesso a garantire che il tuo posto sia tuo - non un foglio di calcolo, non una speranza.",
-  },
-  {
-    title: "Barbieri veri, rapporti veri",
-    body: "Prenota con chi conosce il tuo taglio, non con chi capita libero.",
-  },
-  {
-    title: "Prenotato in pochi secondi",
-    body: "Scegli un orario, conferma, fatto. Niente telefonate, niente attese.",
-  },
-];
-
-// Static portraits in public/team - not the hairdressers table, so the
-// landing page stays renderable without a DB round trip.
-const TEAM: { name: string; instagram?: string }[] = [
-  { name: "angelo", instagram: "angelobarberscarlatella" },
-  { name: "cimbone", instagram: "tonti.alessandro" },
-  { name: "fede" },
-  { name: "luigi" },
-  { name: "vito" },
-];
+// Static portraits in public/team (who appears, and in what order). The
+// Instagram handles come from the hairdressers table, matched by name, so a
+// barber editing their own handle shows up here too.
+const TEAM = ["cimbone", "fede", "luigi", "vito"];
 
 const SHOP_INSTAGRAM = "americanbarbertattoofoggia";
 const GOOGLE_MAPS_URL = "https://www.google.com/maps/search/?api=1&query=AmericanBarberTatoo%20Foggia";
@@ -63,51 +45,70 @@ export default async function Home() {
   const organization = orgSlug ? await getPublicOrganization(orgSlug) : null;
 
   let services: PublicService[] = [];
+  const instagramByName = new Map<string, string>();
   if (organization) {
     const supabase = createPublicClient();
-    const { data } = await supabase
-      .from("services")
-      .select("id, name, duration_minutes, price_cents")
-      .eq("organization_id", organization.id)
-      .eq("active", true)
-      .order("sort_order")
-      .limit(6);
+    // hairdressers is members-only under RLS; the service-role read is
+    // limited to two public columns that the booking page already shows.
+    const [{ data }, { data: barbers }] = await Promise.all([
+      supabase
+        .from("services")
+        .select("id, name, duration_minutes, price_cents")
+        .eq("organization_id", organization.id)
+        .eq("active", true)
+        .order("sort_order")
+        .limit(6),
+      createAdminClient()
+        .from("hairdressers")
+        .select("display_name, instagram_handle")
+        .eq("organization_id", organization.id)
+        .not("instagram_handle", "is", null),
+    ]);
     services = data ?? [];
+    for (const b of barbers ?? []) {
+      instagramByName.set(b.display_name.toLowerCase(), b.instagram_handle!);
+    }
   }
 
   return (
     <div className="min-h-screen text-paper-50">
-      <header className="flex items-center justify-between px-6 py-5 max-w-4xl mx-auto">
-        <Image
-          src="/brand/logo.png"
-          alt="American Barber Tattoo"
-          width={112}
-          height={78}
-          priority
-          fetchPriority="high"
-          sizes="112px"
-          className="w-24 h-auto"
-        />
-        <Link href="/login" className="text-sm underline underline-offset-2 text-paper-50/80">
-          Accedi
-        </Link>
+      <header className="sticky top-0 z-20 border-b border-paper-50/10 bg-ink-950/85 backdrop-blur-md">
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 h-14 max-w-5xl mx-auto">
+          <a
+            href={`https://instagram.com/${SHOP_INSTAGRAM}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 min-w-0 h-11 text-sm text-paper-50/85 hover:text-paper-50 transition-colors"
+          >
+            <NavIcon name="instagram" className="w-5 h-5 shrink-0" />
+            <span className="truncate">@{SHOP_INSTAGRAM}</span>
+          </a>
+          <Link
+            href="/login"
+            className="shrink-0 h-9 px-4 rounded-full border border-paper-50/25 text-sm font-medium flex items-center transition-colors hover:border-paper-50/60"
+          >
+            Accedi
+          </Link>
+        </div>
       </header>
 
       <section className="animate-fade-in px-6 pt-12 pb-24 sm:pt-20 sm:pb-32 flex flex-col items-center text-center gap-7 max-w-3xl mx-auto">
-        <h1 className="flex flex-col items-center gap-2">
-          <span className="text-2xl sm:text-3xl font-semibold tracking-tight text-paper-50/80">
-            Tagli precisi.
-          </span>
-          {/* text-accent on ink-950 fails WCAG contrast at this weight
-              (2.19:1, needs 3:1) - the font change alone is enough of an
-              accent; red stays reserved for the CTA per DESIGN.md. */}
-          <span className="font-display font-normal text-6xl sm:text-8xl leading-[0.95] [text-shadow:0_0_24px_rgba(245,243,239,0.25)]">
-            Inchiostro deciso.
-          </span>
+        <h1>
+          <Image
+            src="/brand/logo.png"
+            alt="American Barber Tattoo"
+            width={998}
+            height={698}
+            priority
+            fetchPriority="high"
+            sizes="(min-width: 640px) 512px, 90vw"
+            className="w-full max-w-lg h-auto"
+          />
         </h1>
         <p className="text-paper-50/70 text-lg max-w-md">
-          Barberia e tattoo studio a Foggia. Scegli il tuo barbiere, scegli
-          l&apos;orario, conferma. Niente telefonate, niente attese.
+          Barberia e tattoo studio a Foggia.
+          <br />
+          Prenota il tuo taglio online.
         </p>
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
           <Link
@@ -131,10 +132,12 @@ export default async function Home() {
           <p className="text-paper-50/60 mt-1">Prenota con chi conosce il tuo taglio.</p>
         </div>
         {/* Swipe row on phones (next card peeks in to hint at scrolling),
-            plain 5-up grid from sm up - CSS only. scroll-pl keeps snapped
+            plain 4-up grid from sm up - CSS only. scroll-pl keeps snapped
             cards aligned with the page gutter instead of the screen edge. */}
-        <ul className="flex sm:grid sm:grid-cols-5 gap-3 overflow-x-auto snap-x snap-mandatory scroll-pl-6 px-6 max-w-5xl mx-auto no-scrollbar">
-          {TEAM.map(({ name, instagram }) => (
+        <ul className="flex sm:grid sm:grid-cols-4 gap-3 overflow-x-auto snap-x snap-mandatory scroll-pl-6 px-6 max-w-5xl mx-auto no-scrollbar">
+          {TEAM.map((name) => {
+            const instagram = instagramByName.get(name);
+            return (
             <li key={name} className="snap-start shrink-0 w-[42%] sm:w-auto">
               <figure className="relative rounded-md overflow-hidden border border-paper-50/15 bg-ink-900">
                 <Image
@@ -160,13 +163,14 @@ export default async function Home() {
                 </figcaption>
               </figure>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </section>
 
       {services.length > 0 && (
         <section className="px-6 py-16 border-t border-paper-50/10 max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-8">Cosa offriamo</h2>
+          <h2 className="font-display text-4xl sm:text-5xl mb-8">Cosa offriamo</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {services.map((service) => (
               <div
@@ -198,7 +202,12 @@ export default async function Home() {
             className="text-right shrink-0"
           >
             <span className="block text-2xl font-semibold tabular-nums">
-              {GOOGLE_RATING.score} <span className="text-lg" aria-hidden>★★★★★</span>
+              {GOOGLE_RATING.score}{" "}
+              <span className="inline-flex align-middle" aria-hidden>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <NavIcon key={i} name="star" className="w-4 h-4 fill-current" />
+                ))}
+              </span>
             </span>
             <span className="block text-xs text-paper-50/60 underline underline-offset-2">
               {GOOGLE_RATING.count} recensioni su Google
@@ -211,7 +220,6 @@ export default async function Home() {
               key={review.author}
               className="snap-start shrink-0 w-[80%] sm:w-auto rounded-lg bg-ink-900 border border-paper-50/15 p-4 flex flex-col gap-3"
             >
-              <span className="text-sm" aria-label="5 stelle su 5">★★★★★</span>
               <blockquote className="text-paper-50/85 leading-relaxed">&ldquo;{review.text}&rdquo;</blockquote>
               <p className="text-sm text-paper-50/50 mt-auto">{review.author}, su Google</p>
             </li>
@@ -219,20 +227,19 @@ export default async function Home() {
         </ul>
       </section>
 
-      <section className="px-6 py-16 max-w-5xl mx-auto grid gap-8 sm:grid-cols-3">
-        {VALUE_PROPS.map((prop) => (
-          <div key={prop.title} className="border-t-2 border-accent pt-4">
-            <p className="font-semibold mb-1">{prop.title}</p>
-            <p className="text-paper-50/60 text-sm">{prop.body}</p>
-          </div>
-        ))}
-      </section>
-
       <section className="px-6 py-16 max-w-5xl mx-auto">
         <h2 className="font-display text-4xl sm:text-5xl mb-8">Dove siamo</h2>
         <div className="rounded-lg bg-ink-900 border border-paper-50/15 p-6">
           <BusinessInfo />
         </div>
+        {/* Keyless embed URL - the Maps Embed API would need a billed key. */}
+        <iframe
+          title="Mappa: American Barber Tattoo"
+          src={`https://www.google.com/maps?q=${encodeURIComponent(ADDRESS)}&output=embed`}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          className="mt-3 w-full h-72 sm:h-96 rounded-lg border border-paper-50/15 bg-ink-900"
+        />
       </section>
 
       <footer className="px-6 py-10 border-t border-paper-50/10 bg-ink-950/80 flex flex-col items-center gap-3">
@@ -244,14 +251,6 @@ export default async function Home() {
           sizes="80px"
           className="w-16 h-auto opacity-70"
         />
-        <a
-          href={`https://instagram.com/${SHOP_INSTAGRAM}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm underline underline-offset-2 text-paper-50/80 py-2"
-        >
-          Seguici su Instagram @{SHOP_INSTAGRAM}
-        </a>
         <div className="flex gap-6">
           <Link href="/login" className="text-sm underline underline-offset-2 text-paper-50/60 py-2">
             Accedi

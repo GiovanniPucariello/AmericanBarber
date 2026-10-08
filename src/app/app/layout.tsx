@@ -2,6 +2,7 @@ import { ensureCustomerMembership } from "@/lib/organizations/membership";
 import { TopBar } from "@/components/layout/top-bar";
 import { BottomNav, type NavItem } from "@/components/layout/bottom-nav";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/app", label: "Home", icon: "home", exact: true },
@@ -18,7 +19,10 @@ export default async function AppLayout({
   return (
     <div className="min-h-screen text-paper-50 pb-[calc(4rem+env(safe-area-inset-bottom))]">
       <TopBar homeHref="/app">
-        <NotificationBell href="/app/notifications" />
+        <div className="flex items-center">
+          <NotificationBell href="/app/notifications" />
+          <SignOutButton />
+        </div>
       </TopBar>
       <main className="animate-fade-in max-w-2xl mx-auto">{children}</main>
       <BottomNav items={NAV_ITEMS} />

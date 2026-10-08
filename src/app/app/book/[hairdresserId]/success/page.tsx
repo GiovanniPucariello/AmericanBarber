@@ -43,8 +43,8 @@ export default async function BookingSuccessPage({
 
   return (
     <div className="p-6 flex flex-col items-center gap-6 text-center pt-16">
-      <div className="animate-scale-in w-16 h-16 rounded-full bg-accent flex items-center justify-center text-2xl">
-        ✓
+      <div className="animate-scale-in w-16 h-16 rounded-full bg-accent flex items-center justify-center">
+        <NavIcon name="check" className="w-8 h-8" />
       </div>
       <div>
         <h1 className="text-xl font-semibold">Appuntamento confermato</h1>

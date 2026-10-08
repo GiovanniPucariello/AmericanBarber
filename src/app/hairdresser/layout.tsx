@@ -2,6 +2,7 @@ import { requireOrgRole } from "@/lib/permissions/require-role";
 import { TopBar } from "@/components/layout/top-bar";
 import { BottomNav, type NavItem } from "@/components/layout/bottom-nav";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/hairdresser", label: "Agenda", icon: "calendar", exact: true },
@@ -19,7 +20,10 @@ export default async function HairdresserLayout({
   return (
     <div className="min-h-screen text-paper-50 pb-[calc(4rem+env(safe-area-inset-bottom))]">
       <TopBar homeHref="/hairdresser">
-        <NotificationBell href="/hairdresser/notifications" />
+        <div className="flex items-center">
+          <NotificationBell href="/hairdresser/notifications" />
+          <SignOutButton />
+        </div>
       </TopBar>
       <main className="animate-fade-in max-w-2xl mx-auto">{children}</main>
       <BottomNav items={NAV_ITEMS} />

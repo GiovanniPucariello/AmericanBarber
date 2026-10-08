@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { NavIcon } from "@/components/layout/nav-icon";
 
 // Chrome/Samsung-only event, not in the DOM lib types.
 type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void> };
@@ -90,9 +91,9 @@ export function InstallBanner() {
           type="button"
           onClick={dismiss}
           aria-label="Chiudi"
-          className="h-9 w-9 shrink-0 rounded-md text-lg leading-none"
+          className="h-9 w-9 shrink-0 rounded-md flex items-center justify-center"
         >
-          ✕
+          <NavIcon name="x" className="w-5 h-5" />
         </button>
       </div>
       {showSteps && (

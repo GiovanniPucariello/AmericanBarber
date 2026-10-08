@@ -167,7 +167,7 @@ export default async function AppHome() {
     <div className="p-6 flex flex-col gap-6">
       <div>
         <p className="text-paper-50/60 text-sm">Bentornato</p>
-        <h1 className="text-2xl font-bold tracking-tight">{firstName ?? ""} 👋</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{firstName ?? ""}</h1>
       </div>
 
       {(upcoming || !usualSlot) && (

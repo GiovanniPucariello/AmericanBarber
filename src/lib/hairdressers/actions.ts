@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireOrgRole } from "@/lib/permissions/require-role";
 import { hairdresserSchema, linkHairdresserAccountSchema } from "./schemas";
+import type { AuthActionState } from "@/lib/auth/state";
 
 export type HairdresserActionState = { error: string | null };
 
@@ -178,4 +179,43 @@ export async function linkHairdresserAccount(
 
   revalidatePath("/admin/staff");
   return { error: null };
+}
+
+// A hairdresser edits their own Instagram handle. RLS only lets admins
+// update hairdressers rows, so this goes through the service-role client -
+// scoped to the row linked to the signed-in user and to this one column, so
+// it can't touch anyone else's row or their own active/sort_order.
+export async function updateOwnInstagram(
+  _prevState: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const organization = await requireOrgRole("hairdresser");
+  const raw = String(formData.get("instagram") ?? "")
+    .trim()
+    .replace(/^@/, "")
+    .replace(/^(https?:\/\/)?(www\.)?instagram\.com\//i, "")
+    .replace(/\/.*$/, "");
+  if (raw && !/^[A-Za-z0-9._]{1,30}$/.test(raw)) {
+    return { error: "Nome utente Instagram non valido." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { error } = await createAdminClient()
+    .from("hairdressers")
+    .update({ instagram_handle: raw || null })
+    .eq("organization_id", organization.id)
+    .eq("profile_id", user.id);
+  if (error) {
+    return { error: "Impossibile salvare. Riprova." };
+  }
+
+  revalidatePath("/hairdresser/profile");
+  revalidatePath("/app/book", "layout");
+  revalidatePath("/");
+  return { error: null, success: "Instagram aggiornato." };
 }

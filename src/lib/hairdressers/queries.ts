@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 export type CurrentHairdresser = {
   id: string;
   displayName: string;
+  instagramHandle: string | null;
 };
 
 // The hairdresser row a signed-in user's profile is linked to within an
@@ -21,11 +22,11 @@ export async function getCurrentHairdresser(
 
   const { data } = await supabase
     .from("hairdressers")
-    .select("id, display_name")
+    .select("id, display_name, instagram_handle")
     .eq("organization_id", organizationId)
     .eq("profile_id", user.id)
     .maybeSingle();
 
   if (!data) return null;
-  return { id: data.id, displayName: data.display_name };
+  return { id: data.id, displayName: data.display_name, instagramHandle: data.instagram_handle };
 }

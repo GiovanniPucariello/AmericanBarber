@@ -9,6 +9,7 @@ import { DateCarousel } from "@/components/booking/date-carousel";
 import { TimeSlotGrid } from "@/components/booking/time-slot-grid";
 import { getPreferredHairdresserId } from "@/lib/preferences/queries";
 import { togglePreferredHairdresser } from "@/lib/preferences/actions";
+import { NavIcon } from "@/components/layout/nav-icon";
 
 export default async function ChooseServiceAndTimePage({
   params,
@@ -133,7 +134,7 @@ export default async function ChooseServiceAndTimePage({
               isPreferred ? "bg-accent border-accent text-paper-50" : "border-paper-50/25 text-paper-50/80"
             }`}
           >
-            <span aria-hidden>{isPreferred ? "★" : "☆"}</span>
+            <NavIcon name="star" className={`w-4 h-4 ${isPreferred ? "fill-current" : ""}`} />
             {isPreferred ? "Il mio barbiere" : "Imposta come mio"}
           </button>
         </form>
@@ -143,8 +144,8 @@ export default async function ChooseServiceAndTimePage({
         href={`/app/book/${hairdresserId}/recurring`}
         className="rounded-md bg-ink-900 border border-paper-50/15 p-3 flex items-center gap-3 hover:border-accent transition-[border-color,transform] active:scale-[0.98]"
       >
-        <span className="w-10 h-10 shrink-0 rounded-full bg-accent/25 text-paper-50 flex items-center justify-center text-lg">
-          ↻
+        <span className="w-10 h-10 shrink-0 rounded-full bg-accent/25 text-paper-50 flex items-center justify-center">
+          <NavIcon name="repeat" className="w-5 h-5" />
         </span>
         <span>
           <span className="block text-sm font-medium">Prenotazione ricorrente</span>
