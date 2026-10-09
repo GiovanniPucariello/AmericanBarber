@@ -72,7 +72,10 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen text-paper-50">
-      <header className="sticky top-0 z-20 border-b border-paper-50/10 bg-ink-950/85 backdrop-blur-md">
+      <header
+        className="sticky top-0 z-20 border-b border-paper-50/10 bg-ink-950/85 backdrop-blur-md"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         <div className="flex items-center justify-between gap-3 px-4 sm:px-6 h-14 max-w-5xl mx-auto">
           <a
             href={`https://instagram.com/${SHOP_INSTAGRAM}`}
