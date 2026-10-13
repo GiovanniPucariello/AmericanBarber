@@ -227,21 +227,39 @@ export async function updateOwnContacts(
   return { error: null, success: "Contatti aggiornati." };
 }
 
-// Slot mode for the barber's own bookings (see compute.ts sliceIntoSlots).
-export async function setOwnAlternatingSlots(enabled: boolean): Promise<void> {
+// The barber's own fixed booking start times per weekday (see compute.ts
+// sliceIntoSlots). One text field per day, "08:20, 09:00, ..."; an empty
+// day falls back to the usual service-length grid.
+export async function setOwnSlotTimes(
+  _prevState: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
   const organization = await requireOrgRole("hairdresser");
+  const slotTimes: Record<string, string[]> = {};
+  for (let weekday = 0; weekday < 7; weekday++) {
+    const times = String(formData.get(`day${weekday}`) ?? "")
+      .split(/[\s,;]+/)
+      .filter(Boolean)
+      .map((t) => t.replace(".", ":").replace(/^(\d):/, "0$1:"));
+    const bad = times.find((t) => !/^([01]\d|2[0-3]):[0-5]\d$/.test(t));
+    if (bad) return { error: `Orario non valido: "${bad}". Usa il formato 08:20.` };
+    if (times.length) slotTimes[weekday] = [...new Set(times)].sort();
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  await createAdminClient()
+  const { error } = await createAdminClient()
     .from("hairdressers")
-    .update({ alternating_slots: enabled })
+    .update({ slot_times: Object.keys(slotTimes).length ? slotTimes : null })
     .eq("organization_id", organization.id)
     .eq("profile_id", user.id);
+  if (error) return { error: "Impossibile salvare. Riprova." };
 
   revalidatePath("/hairdresser/availability");
   revalidatePath("/app/book", "layout");
+  return { error: null, success: "Orari degli slot salvati." };
 }

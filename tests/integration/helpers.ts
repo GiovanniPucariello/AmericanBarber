@@ -138,10 +138,13 @@ export async function createTestHairdresser(
   profileId: string | null = null,
 ): Promise<string> {
   const res = await client.query(
-    `insert into public.hairdressers (organization_id, profile_id, display_name, active, sort_order)
-     values ($1, $2, $3, true, 999) returning id`,
+    `insert into public.hairdressers (organization_id, profile_id, display_name, active, sort_order, slot_times)
+     values ($1, $2, $3, true, 999, null) returning id`,
     [organizationId, profileId, displayName],
   );
+  // New barbers get the shop's default hours from a trigger; tests set
+  // their own rules, so start from a blank schedule.
+  await client.query("delete from public.availability_rules where hairdresser_id = $1", [res.rows[0].id]);
   return res.rows[0].id;
 }
 

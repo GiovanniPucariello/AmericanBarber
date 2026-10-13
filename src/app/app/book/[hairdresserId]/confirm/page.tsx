@@ -39,7 +39,7 @@ export default async function ConfirmBookingPage({
 
   const startLocal = DateTime.fromISO(start, { zone: "utc" }).setZone(organization.timezone);
   // Same length the booking will get: the picked slot's (fixed 30/45 for
-  // barbers on alternating slots), else the service's own duration.
+  // barbers with fixed slot times), else the service's own duration.
   const slot = (
     await computeAvailableSlots(supabase, {
       hairdresserId,

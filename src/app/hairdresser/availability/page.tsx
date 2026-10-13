@@ -5,7 +5,7 @@ import { getCurrentHairdresser } from "@/lib/hairdressers/queries";
 import { AvailabilityRulesSection } from "@/components/hairdressers/availability-rules-section";
 import { AvailabilityExceptionsSection } from "@/components/hairdressers/availability-exceptions-section";
 import { BlockedSlotsSection } from "@/components/hairdressers/blocked-slots-section";
-import { setOwnAlternatingSlots } from "@/lib/hairdressers/actions";
+import { SlotTimesForm } from "@/components/hairdressers/slot-times-form";
 
 export default async function AvailabilityPage() {
   const organization = await getCurrentOrganization();
@@ -46,23 +46,8 @@ export default async function AvailabilityPage() {
   return (
     <div className="p-6 flex flex-col gap-8">
       <h1 className="text-lg font-semibold">Disponibilità - {hairdresser.displayName}</h1>
-      <section className="flex flex-col gap-3">
-        <h2 className="font-semibold">Durata degli appuntamenti</h2>
-        <p className="text-sm text-paper-50/70">
-          {hairdresser.alternatingSlots
-            ? "Slot fissi alternati 30 e 45 minuti dall'apertura (30, 45, 30, 45…). Ogni prenotazione occupa uno slot, qualunque sia il servizio."
-            : "Ogni prenotazione dura quanto il servizio scelto (taglio, barba, taglio + barba)."}
-        </p>
-        <form action={setOwnAlternatingSlots.bind(null, !hairdresser.alternatingSlots)}>
-          <button
-            type="submit"
-            className="h-11 px-4 rounded-md border border-paper-50/15 bg-ink-900 text-sm font-medium"
-          >
-            {hairdresser.alternatingSlots ? "Usa la durata del servizio" : "Usa slot alternati 30/45 min"}
-          </button>
-        </form>
-      </section>
       <AvailabilityRulesSection rules={rules ?? []} />
+      <SlotTimesForm slotTimes={hairdresser.slotTimes} />
       <AvailabilityExceptionsSection exceptions={exceptions ?? []} />
       <BlockedSlotsSection blockedSlots={blockedSlots ?? []} />
     </div>

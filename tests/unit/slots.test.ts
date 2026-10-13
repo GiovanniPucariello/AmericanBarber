@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { sliceIntoSlots } from "@/lib/availability/compute";
+import { dayStartTimes } from "@/lib/availability/slot-times";
 
 const H = 3_600_000;
 const M = 60_000;
@@ -12,31 +13,39 @@ describe("sliceIntoSlots", () => {
     const slots = sliceIntoSlots([{ start: at(19), end: at(20) }], [], day, {
       stepMs: 30 * M,
       durationMs: 30 * M,
-      alternating: false,
     });
     expect(slots.map((s) => `${hhmm(s.start)}-${hhmm(s.end)}`)).toEqual(["19:00-19:30", "19:30-20:00", "20:00-20:30"]);
   });
 
-  it("alternating: 30/45 back to back from opening, last start <= closing", () => {
-    const slots = sliceIntoSlots([{ start: at(8, 20), end: at(11) }], [], day, {
+  it("fixed starts: each slot runs to the next start, max 45 min", () => {
+    const slots = sliceIntoSlots([{ start: at(8, 20), end: at(20) }], [], day, {
       stepMs: 30 * M,
       durationMs: 60 * M, // service length is ignored
-      alternating: true,
+      fixedStarts: [at(8, 20), at(9), at(9, 45), at(12, 20), at(14, 20), at(19, 45)],
     });
     expect(slots.map((s) => `${hhmm(s.start)}-${hhmm(s.end)}`)).toEqual([
-      "08:20-08:50",
-      "08:50-09:35",
-      "09:35-10:05",
-      "10:05-10:50",
-      "10:50-11:20",
+      "08:20-09:00",
+      "09:00-09:45",
+      "09:45-10:30",
+      "12:20-13:05",
+      "14:20-15:05",
+      "19:45-20:30",
     ]);
+  });
+
+  it("fixed starts outside opening hours or in an exception are dropped", () => {
+    const slots = sliceIntoSlots([{ start: at(8, 20), end: at(20) }], [{ start: at(14), end: at(20) }], day, {
+      stepMs: 30 * M,
+      durationMs: 30 * M,
+      fixedStarts: [at(7, 45), at(8, 20), at(12, 20), at(14, 20)],
+    });
+    expect(slots.map((s) => hhmm(s.start))).toEqual(["08:20", "12:20"]);
   });
 
   it("drops slots that overlap an unavailable range", () => {
     const slots = sliceIntoSlots([{ start: at(9), end: at(11) }], [{ start: at(10), end: at(11) }], day, {
       stepMs: 30 * M,
       durationMs: 30 * M,
-      alternating: false,
     });
     expect(slots.map((s) => hhmm(s.start))).toEqual(["09:00", "09:30"]);
   });
@@ -47,25 +56,16 @@ describe("sliceIntoSlots closing rule", () => {
     const slots = sliceIntoSlots([{ start: at(17), end: at(20) }], [{ start: at(18), end: at(20) }], day, {
       stepMs: 30 * M,
       durationMs: 30 * M,
-      alternating: false,
     });
     expect(slots.map((s) => hhmm(s.start))).toEqual(["17:00", "17:30"]);
   });
 });
 
-describe("sliceIntoSlots alternating closing slot", () => {
-  const opts = { stepMs: 30 * M, durationMs: 30 * M, alternating: true };
-  const fmt = (slots: { start: number; end: number }[]) => slots.slice(-2).map((s) => `${hhmm(s.start)}-${hhmm(s.end)}`);
-
-  it("cuts the slot crossing closing and books closing time last", () => {
-    // 08:20 open, 20:00 close: ... 18:50-19:35, 19:35-20:05 without the rule.
-    expect(fmt(sliceIntoSlots([{ start: at(8, 20), end: at(20) }], [], day, { ...opts, closingSlot: true }))).toEqual([
-      "19:35-20:00",
-      "20:00-20:45",
-    ]);
-  });
-
-  it("without the rule (Friday) the plain run is kept", () => {
-    expect(fmt(sliceIntoSlots([{ start: at(8, 20), end: at(21) }], [], day, opts))).toEqual(["20:05-20:50", "20:50-21:20"]);
+describe("dayStartTimes", () => {
+  it("reads the weekday's sorted list, null when missing or empty", () => {
+    const times = { "1": ["09:00", "08:20"], "2": [] };
+    expect(dayStartTimes(times, 1)).toEqual(["08:20", "09:00"]);
+    expect(dayStartTimes(times, 2)).toBeNull();
+    expect(dayStartTimes(null, 1)).toBeNull();
   });
 });

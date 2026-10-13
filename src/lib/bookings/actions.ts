@@ -83,7 +83,7 @@ export async function createAppointment(
     return { error: "Questo orario non è più disponibile. Scegli un altro orario." };
   }
   // The slot decides the length: the service's duration on the usual grid,
-  // a fixed 30/45 for barbers on alternating slots.
+  // the barber's own fixed slot for those with a slot list.
   const end = DateTime.fromISO(slot.endUtc, { zone: "utc" });
 
   const { data: appointment, error } = await supabase

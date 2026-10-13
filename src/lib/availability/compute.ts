@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { localToUtc, weekdayOf } from "./timezone";
 import { parseRange, subtractIntervals, unionIntervals, type Interval } from "./intervals";
+import { dayStartTimes } from "./slot-times";
 
 export type AvailableSlot = { startUtc: string; endUtc: string };
 export type DaySlot = AvailableSlot & { available: boolean };
@@ -24,8 +25,8 @@ type FetchedIntervals = {
   unavailable: Interval[];
   /** Already occupied by something else (blocked slots, other bookings). */
   occupied: Interval[];
-  /** Barber books fixed alternating 30/45-minute slots instead of the service grid. */
-  alternatingSlots: boolean;
+  /** Fixed booking start times for this day (UTC ms), or null for the service grid. */
+  fixedStarts: number[] | null;
 };
 
 // Shared data-fetch + interval-building for both computeAvailableSlots (the
@@ -65,7 +66,7 @@ async function fetchIntervals(
       .eq("hairdresser_id", hairdresserId)
       .in("status", ["pending", "confirmed"])
       .overlaps("during", dayRangeLiteral),
-    supabase.from("hairdressers").select("alternating_slots").eq("id", hairdresserId).maybeSingle(),
+    supabase.from("hairdressers").select("slot_times").eq("id", hairdresserId).maybeSingle(),
   ]);
 
   for (const res of [rulesRes, exceptionsRes, blockedRes, appointmentsRes, hairdresserRes]) {
@@ -119,42 +120,35 @@ async function fetchIntervals(
     potential: unionIntervals([...ruleIntervals, ...extraIntervals]),
     unavailable: unavailableIntervals,
     occupied: [...blockedIntervals, ...appointmentIntervals],
-    alternatingSlots: hairdresserRes.data?.alternating_slots ?? false,
+    fixedStarts: dayStartTimes(hairdresserRes.data?.slot_times, weekday)?.map((t) => localToUtc(date, t, timeZone).toMillis()) ?? null,
   };
 }
 
-const ALTERNATING_SLOT_MINUTES = [30, 45];
+// A fixed slot runs until the next listed start, at most this long (the
+// shop's lists step 30-45 minutes; the last slot before a break gets 45).
+const FIXED_SLOT_MAX_MINUTES = 45;
 
 const overlaps = (a: Interval, list: Interval[]) => list.some((b) => a.start < b.end && b.start < a.end);
 
 // Every slot the barber's open windows allow, minus those cut by an explicit
 // exception (vacation, unavailable range). Closing time is the last allowed
-// *start*: the shop takes a booking at 20:00 and finishes at 20:30. Slots
-// are laid out over the whole window so the grid stays anchored to opening.
+// *start*: the shop takes a booking at 20:00 and finishes at 20:30. With
+// fixedStarts (the barber's own list for the day) only those starts exist.
 export function sliceIntoSlots(
   windows: Interval[],
   unavailable: Interval[],
   dayStartMs: number,
-  {
-    stepMs,
-    durationMs,
-    alternating,
-    closingSlot = false,
-  }: { stepMs: number; durationMs: number; alternating: boolean; closingSlot?: boolean },
+  { stepMs, durationMs, fixedStarts = null }: { stepMs: number; durationMs: number; fixedStarts?: number[] | null },
 ): Interval[] {
   const slots: Interval[] = [];
-  for (const { start, end } of windows) {
-    if (alternating) {
-      // Back to back from opening: 30, 45, 30, 45... one booking per slot.
-      // With closingSlot, the slot crossing closing time is cut short so the
-      // closing time itself is always the last booking (19:35-20:00, 20:00).
-      for (let t = start, i = 0; t <= end; i++) {
-        let len = ALTERNATING_SLOT_MINUTES[i % 2] * 60_000;
-        if (closingSlot && t < end && t + len > end) len = end - t;
-        slots.push({ start: t, end: t + len });
-        t += len;
-      }
-    } else {
+  if (fixedStarts) {
+    const maxMs = FIXED_SLOT_MAX_MINUTES * 60_000;
+    fixedStarts.forEach((t, i) => {
+      const next = fixedStarts[i + 1] ?? Infinity;
+      slots.push({ start: t, end: Math.min(next, t + maxMs) });
+    });
+  } else {
+    for (const { start, end } of windows) {
       // Align to the grid from the day's own start, not this window's start,
       // so slots always land on :00/:30 etc. regardless of where a
       // rule/exception happens to begin.
@@ -201,7 +195,7 @@ export async function computeDaySchedule(
   supabase: SupabaseClient<Database>,
   params: ComputeAvailableSlotsParams,
 ): Promise<DaySlot[]> {
-  const { dayStartMs, potential, unavailable, occupied, alternatingSlots } = await fetchIntervals(supabase, params);
+  const { dayStartMs, potential, unavailable, occupied, fixedStarts } = await fetchIntervals(supabase, params);
   const nowMs = Date.now();
 
   // Slots cut by an exception (a vacation day) don't render at all; slots
@@ -212,10 +206,7 @@ export async function computeDaySchedule(
   return sliceIntoSlots(potential, unavailable, dayStartMs, {
     stepMs: params.bookingIntervalMinutes * 60_000,
     durationMs: params.serviceDurationMinutes * 60_000,
-    alternating: alternatingSlots,
-    // Shop rule (Cimbone): closing time is the last booking, except Friday,
-    // which keeps the plain 30/45 run. weekday 4 = Friday (0 = Monday).
-    closingSlot: weekdayOf(params.date, params.timeZone) !== 4,
+    fixedStarts,
   })
     .filter(({ start }) => start > nowMs)
     .map((slot) => ({

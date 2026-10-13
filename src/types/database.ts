@@ -625,6 +625,7 @@ export type Database = {
       hairdressers: {
         Row: {
           alternating_slots: boolean
+          slot_times: Json | null
           active: boolean
           avatar_url: string | null
           bio: string | null
@@ -640,6 +641,7 @@ export type Database = {
         }
         Insert: {
           alternating_slots?: boolean
+          slot_times?: Json | null
           active?: boolean
           avatar_url?: string | null
           bio?: string | null
@@ -655,6 +657,7 @@ export type Database = {
         }
         Update: {
           alternating_slots?: boolean
+          slot_times?: Json | null
           active?: boolean
           avatar_url?: string | null
           bio?: string | null
