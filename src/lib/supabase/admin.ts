@@ -6,7 +6,7 @@ import type { Database } from "@/types/database";
 // never derive authorization from anything reached through this client.
 // Used for provisioning a hairdresser's auth.users row
 // (supabase.auth.admin.*) and for a hairdresser editing their own
-// instagram_handle (updateOwnInstagram, filtered to their own row).
+// instagram_handle and phone (updateOwnContacts, filtered to their own row).
 export function createAdminClient() {
   return createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

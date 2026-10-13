@@ -8,6 +8,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/app", label: "Home", icon: "home", exact: true },
   { href: "/app/book", label: "Prenota", icon: "scissors", prominent: true },
   { href: "/app/appointments", label: "Appuntamenti", icon: "calendar" },
+  { href: "/app/styles", label: "Stili", icon: "grid" },
   { href: "/app/profile", label: "Profilo", icon: "user" },
 ];
 

@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { requireOrgRole } from "@/lib/permissions/require-role";
+import { getCurrentHairdresser } from "@/lib/hairdressers/queries";
 import { TopBar } from "@/components/layout/top-bar";
 import { BottomNav, type NavItem } from "@/components/layout/bottom-nav";
 
@@ -12,11 +14,18 @@ const NAV_ITEMS: NavItem[] = [
 export default async function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  await requireOrgRole("admin");
+  const organization = await requireOrgRole("admin");
+  const hairdresser = await getCurrentHairdresser(organization.id);
 
   return (
     <div className="min-h-screen text-paper-50 pb-[calc(4rem+env(safe-area-inset-bottom))]">
-      <TopBar homeHref="/admin" />
+      <TopBar homeHref="/admin">
+        {hairdresser && (
+          <Link href="/hairdresser" className="h-11 px-2 flex items-center text-sm underline underline-offset-2">
+            La mia agenda
+          </Link>
+        )}
+      </TopBar>
       <main className="animate-fade-in">{children}</main>
       <BottomNav items={NAV_ITEMS} />
     </div>

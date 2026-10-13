@@ -57,8 +57,9 @@ describe("availability computation (integration)", () => {
       serviceDurationMinutes: 30,
       bookingIntervalMinutes: 30,
     });
-    // 09:00-12:00 in 30-minute steps: 09:00, 09:30, ... 11:30 = 6 slots.
-    expect(slots).toHaveLength(6);
+    // 09:00-12:00 in 30-minute steps: 09:00, 09:30, ... 11:30, plus 12:00 -
+    // closing time is the last allowed start = 7 slots.
+    expect(slots).toHaveLength(7);
     expect(slots[0].startUtc).toBe("2026-11-04T08:00:00.000Z"); // CET = UTC+1
   });
 

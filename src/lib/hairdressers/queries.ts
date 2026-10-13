@@ -4,6 +4,8 @@ export type CurrentHairdresser = {
   id: string;
   displayName: string;
   instagramHandle: string | null;
+  phone: string | null;
+  alternatingSlots: boolean;
 };
 
 // The hairdresser row a signed-in user's profile is linked to within an
@@ -22,11 +24,11 @@ export async function getCurrentHairdresser(
 
   const { data } = await supabase
     .from("hairdressers")
-    .select("id, display_name, instagram_handle")
+    .select("id, display_name, instagram_handle, phone, alternating_slots")
     .eq("organization_id", organizationId)
     .eq("profile_id", user.id)
     .maybeSingle();
 
   if (!data) return null;
-  return { id: data.id, displayName: data.display_name, instagramHandle: data.instagram_handle };
+  return { id: data.id, displayName: data.display_name, instagramHandle: data.instagram_handle, phone: data.phone, alternatingSlots: data.alternating_slots };
 }

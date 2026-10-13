@@ -1,24 +1,28 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import { shopHours } from "@/lib/availability/shop-hours";
+
 export const ADDRESS = "Viale Giuseppe la Torre, 304, 71122 Foggia FG";
 const PHONE_DISPLAY = "351 913 1549";
 const PHONE_TEL = "+393519131549";
 const INSTAGRAM = "americanbarbertattoofoggia";
 const MAPS_URL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ADDRESS)}`;
 
-const HOURS: { day: string; hours: string }[] = [
-  { day: "Lunedì", hours: "08–22" },
-  { day: "Martedì", hours: "08–22" },
-  { day: "Mercoledì", hours: "08–22" },
-  { day: "Giovedì", hours: "08–22" },
-  { day: "Venerdì", hours: "08–22" },
-  { day: "Sabato", hours: "08–19" },
-  { day: "Domenica", hours: "Chiuso" },
-];
-
 // Single-location shop (DESIGN.md section 20 - "one today, N in the future"),
-// so this is hardcoded rather than modeled in the database - upgrade to a
-// real settings-backed field if a second location or admin editing is ever
-// needed, not before.
-export function BusinessInfo() {
+// so address/phone are hardcoded. Hours come from the barbers' weekly
+// availability rules, so a barber editing their schedule updates them here.
+export async function BusinessInfo({ organizationId }: { organizationId: string | undefined }) {
+  // availability_rules is members-only under RLS; the service-role read is
+  // limited to the times of active barbers' active rules.
+  const { data: rules } = organizationId
+    ? await createAdminClient()
+        .from("availability_rules")
+        .select("weekday, start_time, end_time, hairdressers!inner(active)")
+        .eq("organization_id", organizationId)
+        .eq("active", true)
+        .eq("hairdressers.active", true)
+    : { data: [] };
+  const hours = shopHours(rules ?? []);
+
   return (
     <div className="grid gap-5 sm:grid-cols-2 sm:gap-10">
       <div className="flex flex-col gap-5">
@@ -58,7 +62,7 @@ export function BusinessInfo() {
       <div>
         <p className="text-paper-50/60 text-sm mb-1">Orari</p>
         <ul className="flex flex-col divide-y divide-paper-50/10">
-          {HOURS.map((row) => (
+          {hours.map((row) => (
             <li key={row.day} className="flex items-center justify-between text-sm py-1.5 tabular-nums">
               <span className="text-paper-50/80">{row.day}</span>
               <span className={row.hours === "Chiuso" ? "text-paper-50/40" : ""}>{row.hours}</span>

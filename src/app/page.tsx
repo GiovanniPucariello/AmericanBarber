@@ -16,9 +16,9 @@ export const revalidate = 3600;
 const DEFAULT_ORG_SLUG = process.env.DEFAULT_ORG_SLUG;
 
 // Static portraits in public/team (who appears, and in what order). The
-// Instagram handles come from the hairdressers table, matched by name, so a
-// barber editing their own handle shows up here too.
-const TEAM = ["cimbone", "fede", "luigi", "vito"];
+// Instagram handles and phone numbers come from the hairdressers table,
+// matched by name, so a barber editing their own contacts shows up here too.
+const TEAM = ["angelo", "cimbone", "fede", "luigi", "vito"];
 
 const SHOP_INSTAGRAM = "americanbarbertattoofoggia";
 const GOOGLE_MAPS_URL = "https://www.google.com/maps/search/?api=1&query=AmericanBarberTatoo%20Foggia";
@@ -45,11 +45,11 @@ export default async function Home() {
   const organization = orgSlug ? await getPublicOrganization(orgSlug) : null;
 
   let services: PublicService[] = [];
-  const instagramByName = new Map<string, string>();
+  const contactsByName = new Map<string, { instagram: string | null; phone: string | null }>();
   if (organization) {
     const supabase = createPublicClient();
     // hairdressers is members-only under RLS; the service-role read is
-    // limited to two public columns that the booking page already shows.
+    // limited to the public columns the booking page already shows.
     const [{ data }, { data: barbers }] = await Promise.all([
       supabase
         .from("services")
@@ -60,13 +60,12 @@ export default async function Home() {
         .limit(6),
       createAdminClient()
         .from("hairdressers")
-        .select("display_name, instagram_handle")
-        .eq("organization_id", organization.id)
-        .not("instagram_handle", "is", null),
+        .select("display_name, instagram_handle, phone")
+        .eq("organization_id", organization.id),
     ]);
     services = data ?? [];
     for (const b of barbers ?? []) {
-      instagramByName.set(b.display_name.toLowerCase(), b.instagram_handle!);
+      contactsByName.set(b.display_name.toLowerCase(), { instagram: b.instagram_handle, phone: b.phone });
     }
   }
 
@@ -139,7 +138,7 @@ export default async function Home() {
             cards aligned with the page gutter instead of the screen edge. */}
         <ul className="flex sm:grid sm:grid-cols-4 gap-3 overflow-x-auto snap-x snap-mandatory scroll-pl-6 px-6 max-w-5xl mx-auto no-scrollbar">
           {TEAM.map((name) => {
-            const instagram = instagramByName.get(name);
+            const { instagram, phone } = contactsByName.get(name) ?? {};
             return (
             <li key={name} className="snap-start shrink-0 w-[42%] sm:w-auto">
               <figure className="relative rounded-md overflow-hidden border border-paper-50/15 bg-ink-900">
@@ -161,6 +160,14 @@ export default async function Home() {
                       className="block text-xs text-paper-50/70 underline underline-offset-2 truncate py-1"
                     >
                       @{instagram}
+                    </a>
+                  )}
+                  {phone && (
+                    <a
+                      href={`tel:${phone.replace(/ /g, "")}`}
+                      className="block text-xs text-paper-50/70 underline underline-offset-2 truncate py-1"
+                    >
+                      {phone}
                     </a>
                   )}
                 </figcaption>
@@ -233,7 +240,7 @@ export default async function Home() {
       <section className="px-6 py-16 max-w-5xl mx-auto">
         <h2 className="font-display text-4xl sm:text-5xl mb-8">Dove siamo</h2>
         <div className="rounded-lg bg-ink-900 border border-paper-50/15 p-6">
-          <BusinessInfo />
+          <BusinessInfo organizationId={organization?.id} />
         </div>
         {/* Keyless embed URL - the Maps Embed API would need a billed key. */}
         <iframe

@@ -66,6 +66,7 @@ export async function addAvailabilityRule(
   if (error) return { error: error.message };
 
   revalidatePath("/hairdresser/availability");
+  revalidatePath("/"); // shop hours on the homepage
   return { error: null };
 }
 
@@ -74,6 +75,7 @@ export async function deleteAvailabilityRule(id: string): Promise<void> {
   const supabase = await createClient();
   await supabase.from("availability_rules").delete().eq("id", id);
   revalidatePath("/hairdresser/availability");
+  revalidatePath("/");
 }
 
 export async function addAvailabilityException(

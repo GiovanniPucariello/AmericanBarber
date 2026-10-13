@@ -26,7 +26,7 @@ export default async function ChooseServiceAndTimePage({
 
   const { data: hairdresser } = await supabase
     .from("hairdressers")
-    .select("id, display_name, avatar_url, instagram_handle")
+    .select("id, display_name, avatar_url, instagram_handle, phone")
     .eq("id", hairdresserId)
     .eq("organization_id", organization.id)
     .eq("active", true)
@@ -123,6 +123,14 @@ export default async function ChooseServiceAndTimePage({
               className="block text-xs text-paper-50/60 underline underline-offset-2 truncate"
             >
               @{hairdresser.instagram_handle}
+            </a>
+          )}
+          {hairdresser.phone && (
+            <a
+              href={`tel:${hairdresser.phone.replace(/ /g, "")}`}
+              className="block text-xs text-paper-50/60 underline underline-offset-2 truncate"
+            >
+              {hairdresser.phone}
             </a>
           )}
         </div>

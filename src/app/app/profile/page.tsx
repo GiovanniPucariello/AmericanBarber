@@ -90,7 +90,7 @@ export default async function ProfilePage() {
 
       <section className="rounded-lg bg-ink-900 border border-paper-50/15 p-4">
         <h2 className="font-semibold mb-3">Dove siamo</h2>
-        <BusinessInfo />
+        <BusinessInfo organizationId={organization?.id} />
       </section>
 
       <form action={signOut}>

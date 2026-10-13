@@ -624,6 +624,7 @@ export type Database = {
       }
       hairdressers: {
         Row: {
+          alternating_slots: boolean
           active: boolean
           avatar_url: string | null
           bio: string | null
@@ -631,12 +632,14 @@ export type Database = {
           display_name: string
           id: string
           instagram_handle: string | null
+          phone: string | null
           organization_id: string
           profile_id: string | null
           sort_order: number
           updated_at: string
         }
         Insert: {
+          alternating_slots?: boolean
           active?: boolean
           avatar_url?: string | null
           bio?: string | null
@@ -644,12 +647,14 @@ export type Database = {
           display_name: string
           id?: string
           instagram_handle?: string | null
+          phone?: string | null
           organization_id: string
           profile_id?: string | null
           sort_order?: number
           updated_at?: string
         }
         Update: {
+          alternating_slots?: boolean
           active?: boolean
           avatar_url?: string | null
           bio?: string | null
@@ -657,6 +662,7 @@ export type Database = {
           display_name?: string
           id?: string
           instagram_handle?: string | null
+          phone?: string | null
           organization_id?: string
           profile_id?: string | null
           sort_order?: number

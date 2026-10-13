@@ -1,16 +1,17 @@
 "use client";
 
 import { useActionState } from "react";
-import { updateOwnInstagram } from "@/lib/hairdressers/actions";
+import { updateOwnContacts } from "@/lib/hairdressers/actions";
 import { authInitialState } from "@/lib/auth/state";
 import { inputClass, primaryButtonClass } from "@/components/auth/styles";
 import { FormError } from "@/components/ui/form-error";
 
-export function InstagramForm({ handle }: { handle: string }) {
-  const [state, formAction, pending] = useActionState(updateOwnInstagram, authInitialState);
+export function ContactsForm({ handle, phone }: { handle: string; phone: string }) {
+  const [state, formAction, pending] = useActionState(updateOwnContacts, authInitialState);
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
+      <h2 className="font-semibold">I tuoi contatti</h2>
       <label className="flex flex-col gap-1.5">
         <span className="text-sm text-paper-50/60">Instagram</span>
         <div className="flex items-center gap-2">
@@ -25,10 +26,22 @@ export function InstagramForm({ handle }: { handle: string }) {
             className={inputClass + " flex-1"}
           />
         </div>
-        <span className="text-xs text-paper-50/50">
-          Compare sotto il tuo nome quando i clienti prenotano. Lascia vuoto per toglierlo.
-        </span>
       </label>
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm text-paper-50/60">Telefono</span>
+        <input
+          name="phone"
+          type="tel"
+          inputMode="tel"
+          defaultValue={phone}
+          autoComplete="tel"
+          placeholder="+39 333 123 4567"
+          className={inputClass}
+        />
+      </label>
+      <span className="text-xs text-paper-50/50">
+        Entrambi facoltativi. Compaiono sotto il tuo nome, visibili ai clienti. Lascia vuoto per toglierli.
+      </span>
 
       <FormError message={state.error} />
       {state.success && !pending && <p className="text-paper-50/80 text-sm" role="status">{state.success}</p>}

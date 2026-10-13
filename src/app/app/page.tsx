@@ -6,6 +6,7 @@ import { DateTime } from "luxon";
 // landing does, so it stays off every other route's CSS.
 import "@fontsource/pirata-one/400.css";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentHairdresser } from "@/lib/hairdressers/queries";
 import { getCurrentOrganization } from "@/lib/organizations/queries";
 import { parseRange } from "@/lib/availability/intervals";
 import { findFirstAvailableDay } from "@/lib/availability/compute";
@@ -23,7 +24,11 @@ export default async function AppHome() {
     return <div className="p-6">Nessuna appartenenza a un&apos;organizzazione.</div>;
   }
   // Every login lands on /app; staff belong in their own area.
-  if (organization.role === "admin" || organization.role === "owner") redirect("/admin");
+  // An admin who also cuts hair (Cimbone, Angelo) starts on their agenda,
+  // with a "Gestione" link up to /admin.
+  if (organization.role === "admin" || organization.role === "owner") {
+    redirect((await getCurrentHairdresser(organization.id)) ? "/hairdresser" : "/admin");
+  }
   if (organization.role === "hairdresser" || organization.role === "manager") redirect("/hairdresser");
 
   const supabase = await createClient();

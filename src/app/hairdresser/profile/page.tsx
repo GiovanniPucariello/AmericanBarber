@@ -6,7 +6,7 @@ import { getCurrentOrganization } from "@/lib/organizations/queries";
 import { getCurrentHairdresser } from "@/lib/hairdressers/queries";
 import { parseRange } from "@/lib/availability/intervals";
 import { PushToggle } from "@/components/push/push-toggle";
-import { InstagramForm } from "@/components/hairdressers/instagram-form";
+import { ContactsForm } from "@/components/hairdressers/contacts-form";
 
 const WEEKDAYS = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"];
 
@@ -105,7 +105,7 @@ export default async function HairdresserProfilePage() {
 
       {hairdresser && (
         <section className="rounded-lg bg-ink-900 border border-paper-50/15 p-4">
-          <InstagramForm handle={hairdresser.instagramHandle ?? ""} />
+          <ContactsForm handle={hairdresser.instagramHandle ?? ""} phone={hairdresser.phone ?? ""} />
         </section>
       )}
 

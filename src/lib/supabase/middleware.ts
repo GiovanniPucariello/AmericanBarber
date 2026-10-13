@@ -37,4 +37,4 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   return { response: supabaseResponse, user };
-}
+}http://localhost:3000/app/styles#buzz-cut

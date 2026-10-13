@@ -58,7 +58,6 @@ export async function createAppointment(
   if (!location) return { error: "Nessuna sede configurata per questa organizzazione." };
 
   const start = DateTime.fromISO(parsed.data.startUtc, { zone: "utc" });
-  const end = start.plus({ minutes: service.duration_minutes });
 
   // The exclusion constraint only stops overlaps - it knows nothing about
   // working hours, days off, past times or which services a barber does.
@@ -79,9 +78,13 @@ export async function createAppointment(
     serviceDurationMinutes: service.duration_minutes,
     bookingIntervalMinutes: organization.bookingIntervalMinutes,
   });
-  if (!openSlots.some((slot) => Date.parse(slot.startUtc) === start.toMillis())) {
+  const slot = openSlots.find((s) => Date.parse(s.startUtc) === start.toMillis());
+  if (!slot) {
     return { error: "Questo orario non è più disponibile. Scegli un altro orario." };
   }
+  // The slot decides the length: the service's duration on the usual grid,
+  // a fixed 30/45 for barbers on alternating slots.
+  const end = DateTime.fromISO(slot.endUtc, { zone: "utc" });
 
   const { data: appointment, error } = await supabase
     .from("appointments")

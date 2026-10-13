@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireOrgRole } from "@/lib/permissions/require-role";
 import { hairdresserSchema, linkHairdresserAccountSchema } from "./schemas";
 import type { AuthActionState } from "@/lib/auth/state";
+import { profileSchema } from "@/lib/auth/schemas";
 
 export type HairdresserActionState = { error: string | null };
 
@@ -170,7 +171,9 @@ export async function linkHairdresserAccount(
   const { error: memberError } = await supabase.from("organization_members").insert({
     organization_id: organization.id,
     profile_id: created.user.id,
-    role: "hairdresser",
+    // "Amministratore" = full control of the shop (staff, services, every
+    // barber's schedule); otherwise only their own agenda and settings.
+    role: formData.get("admin") === "on" ? "admin" : "hairdresser",
     active: true,
   });
   if (memberError) {
@@ -185,7 +188,7 @@ export async function linkHairdresserAccount(
 // update hairdressers rows, so this goes through the service-role client -
 // scoped to the row linked to the signed-in user and to this one column, so
 // it can't touch anyone else's row or their own active/sort_order.
-export async function updateOwnInstagram(
+export async function updateOwnContacts(
   _prevState: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
@@ -198,6 +201,10 @@ export async function updateOwnInstagram(
   if (raw && !/^[A-Za-z0-9._]{1,30}$/.test(raw)) {
     return { error: "Nome utente Instagram non valido." };
   }
+  const phone = profileSchema.shape.phone.safeParse(formData.get("phone") ?? "");
+  if (!phone.success) {
+    return { error: phone.error.issues[0].message };
+  }
 
   const supabase = await createClient();
   const {
@@ -207,7 +214,7 @@ export async function updateOwnInstagram(
 
   const { error } = await createAdminClient()
     .from("hairdressers")
-    .update({ instagram_handle: raw || null })
+    .update({ instagram_handle: raw || null, phone: phone.data || null })
     .eq("organization_id", organization.id)
     .eq("profile_id", user.id);
   if (error) {
@@ -217,5 +224,24 @@ export async function updateOwnInstagram(
   revalidatePath("/hairdresser/profile");
   revalidatePath("/app/book", "layout");
   revalidatePath("/");
-  return { error: null, success: "Instagram aggiornato." };
+  return { error: null, success: "Contatti aggiornati." };
+}
+
+// Slot mode for the barber's own bookings (see compute.ts sliceIntoSlots).
+export async function setOwnAlternatingSlots(enabled: boolean): Promise<void> {
+  const organization = await requireOrgRole("hairdresser");
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await createAdminClient()
+    .from("hairdressers")
+    .update({ alternating_slots: enabled })
+    .eq("organization_id", organization.id)
+    .eq("profile_id", user.id);
+
+  revalidatePath("/hairdresser/availability");
+  revalidatePath("/app/book", "layout");
 }

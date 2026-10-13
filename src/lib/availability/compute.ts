@@ -24,6 +24,8 @@ type FetchedIntervals = {
   unavailable: Interval[];
   /** Already occupied by something else (blocked slots, other bookings). */
   occupied: Interval[];
+  /** Barber books fixed alternating 30/45-minute slots instead of the service grid. */
+  alternatingSlots: boolean;
 };
 
 // Shared data-fetch + interval-building for both computeAvailableSlots (the
@@ -40,7 +42,7 @@ async function fetchIntervals(
   const dayEndUtc = dayStartUtc.plus({ days: 1 });
   const dayRangeLiteral = `[${dayStartUtc.toISO()},${dayEndUtc.toISO()})`;
 
-  const [rulesRes, exceptionsRes, blockedRes, appointmentsRes] = await Promise.all([
+  const [rulesRes, exceptionsRes, blockedRes, appointmentsRes, hairdresserRes] = await Promise.all([
     supabase
       .from("availability_rules")
       .select("start_time, end_time")
@@ -63,9 +65,10 @@ async function fetchIntervals(
       .eq("hairdresser_id", hairdresserId)
       .in("status", ["pending", "confirmed"])
       .overlaps("during", dayRangeLiteral),
+    supabase.from("hairdressers").select("alternating_slots").eq("id", hairdresserId).maybeSingle(),
   ]);
 
-  for (const res of [rulesRes, exceptionsRes, blockedRes, appointmentsRes]) {
+  for (const res of [rulesRes, exceptionsRes, blockedRes, appointmentsRes, hairdresserRes]) {
     if (res.error) throw new Error(res.error.message);
   }
 
@@ -116,47 +119,65 @@ async function fetchIntervals(
     potential: unionIntervals([...ruleIntervals, ...extraIntervals]),
     unavailable: unavailableIntervals,
     occupied: [...blockedIntervals, ...appointmentIntervals],
+    alternatingSlots: hairdresserRes.data?.alternating_slots ?? false,
   };
 }
 
-function sliceIntoSlots(
-  intervals: Interval[],
+const ALTERNATING_SLOT_MINUTES = [30, 45];
+
+const overlaps = (a: Interval, list: Interval[]) => list.some((b) => a.start < b.end && b.start < a.end);
+
+// Every slot the barber's open windows allow, minus those cut by an explicit
+// exception (vacation, unavailable range). Closing time is the last allowed
+// *start*: the shop takes a booking at 20:00 and finishes at 20:30. Slots
+// are laid out over the whole window so the grid stays anchored to opening.
+export function sliceIntoSlots(
+  windows: Interval[],
+  unavailable: Interval[],
   dayStartMs: number,
-  stepMs: number,
-  durationMs: number,
+  {
+    stepMs,
+    durationMs,
+    alternating,
+    closingSlot = false,
+  }: { stepMs: number; durationMs: number; alternating: boolean; closingSlot?: boolean },
 ): Interval[] {
   const slots: Interval[] = [];
-  for (const { start, end } of intervals) {
-    // Align to the grid from the day's own start, not this window's start,
-    // so slots always land on :00/:30 etc. regardless of where a
-    // rule/exception happens to begin.
-    let t = dayStartMs + Math.ceil((start - dayStartMs) / stepMs) * stepMs;
-    for (; t + durationMs <= end; t += stepMs) {
-      slots.push({ start: t, end: t + durationMs });
+  for (const { start, end } of windows) {
+    if (alternating) {
+      // Back to back from opening: 30, 45, 30, 45... one booking per slot.
+      // With closingSlot, the slot crossing closing time is cut short so the
+      // closing time itself is always the last booking (19:35-20:00, 20:00).
+      for (let t = start, i = 0; t <= end; i++) {
+        let len = ALTERNATING_SLOT_MINUTES[i % 2] * 60_000;
+        if (closingSlot && t < end && t + len > end) len = end - t;
+        slots.push({ start: t, end: t + len });
+        t += len;
+      }
+    } else {
+      // Align to the grid from the day's own start, not this window's start,
+      // so slots always land on :00/:30 etc. regardless of where a
+      // rule/exception happens to begin.
+      for (let t = dayStartMs + Math.ceil((start - dayStartMs) / stepMs) * stepMs; t <= end; t += stepMs) {
+        slots.push({ start: t, end: t + durationMs });
+      }
     }
   }
-  return slots;
+  // The start must fall in time the barber is really in (closing time
+  // included), so leaving early - unavailable 18:00-20:00 - also drops 20:00.
+  const open = subtractIntervals(windows, unavailable);
+  return slots.filter(
+    (slot) => open.some((o) => slot.start >= o.start && slot.start <= o.end) && !overlaps(slot, unavailable),
+  );
 }
 
 export async function computeAvailableSlots(
   supabase: SupabaseClient<Database>,
   params: ComputeAvailableSlotsParams,
 ): Promise<AvailableSlot[]> {
-  const { dayStartMs, potential, unavailable, occupied } = await fetchIntervals(supabase, params);
-
-  let free = subtractIntervals(potential, unavailable);
-  free = subtractIntervals(free, occupied);
-
-  const stepMs = params.bookingIntervalMinutes * 60_000;
-  const durationMs = params.serviceDurationMinutes * 60_000;
-  const nowMs = Date.now();
-
-  return sliceIntoSlots(free, dayStartMs, stepMs, durationMs)
-    .filter(({ start }) => start > nowMs)
-    .map(({ start, end }) => ({
-      startUtc: new Date(start).toISOString(),
-      endUtc: new Date(end).toISOString(),
-    }));
+  return (await computeDaySchedule(supabase, params))
+    .filter((slot) => slot.available)
+    .map(({ startUtc, endUtc }) => ({ startUtc, endUtc }));
 }
 
 // For the hairdresser's agenda (section 42): the raw open windows for the
@@ -180,39 +201,27 @@ export async function computeDaySchedule(
   supabase: SupabaseClient<Database>,
   params: ComputeAvailableSlotsParams,
 ): Promise<DaySlot[]> {
-  const { dayStartMs, potential, unavailable, occupied } = await fetchIntervals(supabase, params);
-
-  // "Open" hours exclude explicit exceptions (a vacation day has no slots
-  // to show at all) but deliberately still include occupied time - those
-  // slots need to render, just disabled.
-  const open = subtractIntervals(potential, unavailable);
-  const free = subtractIntervals(open, occupied);
-
-  const stepMs = params.bookingIntervalMinutes * 60_000;
-  const durationMs = params.serviceDurationMinutes * 60_000;
-
-  // A slot is available only if its *entire* [start,end) range fits inside
-  // one contiguous free interval - not just whether its start happens to
-  // match some free interval's own start. Comparing starts alone would mark
-  // only the first grid slot of each free stretch as available, since every
-  // later slot's start doesn't equal that interval's start even though it's
-  // still well within it.
-  const isFree = (start: number, end: number) =>
-    free.some((f) => start >= f.start && end <= f.end);
+  const { dayStartMs, potential, unavailable, occupied, alternatingSlots } = await fetchIntervals(supabase, params);
   const nowMs = Date.now();
 
-  // Slice from the *unoccupied-agnostic* open windows so a slot partially
-  // covered by an existing appointment still appears (as unavailable)
-  // rather than vanishing because subtracting occupied time fragmented the
-  // window out from under the grid alignment. Slots that have already
-  // passed (viewing "today" later in the day) are dropped entirely rather
-  // than shown disabled - they were never "taken", they're just over.
-  return sliceIntoSlots(open, dayStartMs, stepMs, durationMs)
+  // Slots cut by an exception (a vacation day) don't render at all; slots
+  // overlapping a booking or blocked slot render disabled, so a customer can
+  // tell "closed today" apart from "open but fully booked". Slots that have
+  // already passed (viewing "today" later in the day) are dropped entirely -
+  // they were never "taken", they're just over.
+  return sliceIntoSlots(potential, unavailable, dayStartMs, {
+    stepMs: params.bookingIntervalMinutes * 60_000,
+    durationMs: params.serviceDurationMinutes * 60_000,
+    alternating: alternatingSlots,
+    // Shop rule (Cimbone): closing time is the last booking, except Friday,
+    // which keeps the plain 30/45 run. weekday 4 = Friday (0 = Monday).
+    closingSlot: weekdayOf(params.date, params.timeZone) !== 4,
+  })
     .filter(({ start }) => start > nowMs)
-    .map(({ start, end }) => ({
-      startUtc: new Date(start).toISOString(),
-      endUtc: new Date(end).toISOString(),
-      available: isFree(start, end),
+    .map((slot) => ({
+      startUtc: new Date(slot.start).toISOString(),
+      endUtc: new Date(slot.end).toISOString(),
+      available: !overlaps(slot, occupied),
     }));
 }
 

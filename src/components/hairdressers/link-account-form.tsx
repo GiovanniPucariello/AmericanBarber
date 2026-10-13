@@ -42,6 +42,16 @@ export function LinkAccountForm({
         placeholder="Password provvisoria (almeno 8 caratteri)"
         className={inputClass}
       />
+      <label className="flex items-start gap-3 text-sm">
+        <input name="admin" type="checkbox" className="mt-1 h-5 w-5 accent-accent" />
+        <span>
+          Amministratore
+          <span className="block text-paper-50/60">
+            Può modificare tutto: personale, servizi, impostazioni e orari di ogni barbiere. Senza, gestisce solo la
+            propria agenda.
+          </span>
+        </span>
+      </label>
       <FormError message={state.error} />
       <button
         type="submit"

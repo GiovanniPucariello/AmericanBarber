@@ -4,6 +4,7 @@ import { DateTime } from "luxon";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrganization } from "@/lib/organizations/queries";
 import { ConfirmBookingForm } from "@/components/booking/confirm-booking-form";
+import { computeAvailableSlots } from "@/lib/availability/compute";
 
 export default async function ConfirmBookingPage({
   params,
@@ -37,7 +38,21 @@ export default async function ConfirmBookingPage({
   if (!hairdresser || !service) notFound();
 
   const startLocal = DateTime.fromISO(start, { zone: "utc" }).setZone(organization.timezone);
-  const endLocal = startLocal.plus({ minutes: service.duration_minutes });
+  // Same length the booking will get: the picked slot's (fixed 30/45 for
+  // barbers on alternating slots), else the service's own duration.
+  const slot = (
+    await computeAvailableSlots(supabase, {
+      hairdresserId,
+      date: startLocal.toISODate() as string,
+      timeZone: organization.timezone,
+      serviceDurationMinutes: service.duration_minutes,
+      bookingIntervalMinutes: organization.bookingIntervalMinutes,
+    })
+  ).find((s) => Date.parse(s.startUtc) === startLocal.toMillis());
+  const endLocal = slot
+    ? DateTime.fromISO(slot.endUtc, { zone: "utc" }).setZone(organization.timezone)
+    : startLocal.plus({ minutes: service.duration_minutes });
+  const minutes = Math.round(endLocal.diff(startLocal, "minutes").minutes);
 
   const dateKey = startLocal.toISODate();
 
@@ -55,7 +70,7 @@ export default async function ConfirmBookingPage({
           <div>
             <p className="font-medium">{service.name}</p>
             <p className="text-paper-50/60 text-sm">
-              con {hairdresser.display_name} · {service.duration_minutes} min
+              con {hairdresser.display_name} · {minutes} min
             </p>
           </div>
           {service.price_cents != null && (
