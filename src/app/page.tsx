@@ -94,7 +94,9 @@ export default async function Home() {
         </div>
       </header>
 
-      <section className="animate-fade-in px-6 pt-12 pb-24 sm:pt-20 sm:pb-32 flex flex-col items-center text-center gap-7 max-w-3xl mx-auto">
+      {/* On phones the hero fills the first screen (below the sticky header),
+          so the team sits on the "second page", reached by scrolling. */}
+      <section className="animate-fade-in px-6 py-10 min-h-[calc(100svh-3.5rem-env(safe-area-inset-top))] sm:min-h-0 sm:pt-20 sm:pb-32 flex flex-col items-center justify-center text-center gap-7 max-w-3xl mx-auto">
         <h1>
           <Image
             src="/brand/logo.png"
@@ -248,7 +250,9 @@ export default async function Home() {
           src={`https://www.google.com/maps?q=${encodeURIComponent(ADDRESS)}&output=embed`}
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
-          className="mt-3 w-full h-72 sm:h-96 rounded-lg border border-paper-50/15 bg-ink-900"
+          // Keyless embed can't take a map style, so darken it with a filter:
+          // grayscale + invert turns the light map black like the site.
+          className="mt-3 w-full h-72 sm:h-96 rounded-lg border border-paper-50/15 bg-ink-900 [filter:grayscale(1)_invert(0.92)_contrast(0.9)]"
         />
       </section>
 
