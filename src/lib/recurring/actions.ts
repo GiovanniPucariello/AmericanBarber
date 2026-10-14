@@ -6,6 +6,7 @@ import { DateTime } from "luxon";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentOrganization } from "@/lib/organizations/queries";
 import { createRecurringBookingSchema } from "./schemas";
+import { dayStartTimes } from "@/lib/availability/slot-times";
 
 export type RecurringActionState = { error: string | null };
 
@@ -34,6 +35,18 @@ export async function createRecurringBookingRequest(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Devi effettuare l'accesso." };
+
+  // A barber with a slot list only takes series on those exact start times.
+  const { data: barber } = await supabase
+    .from("hairdressers")
+    .select("slot_times")
+    .eq("id", parsed.data.hairdresserId)
+    .maybeSingle();
+  const allowed = dayStartTimes(barber?.slot_times, parsed.data.weekday);
+  if (barber?.slot_times && !allowed) return { error: "Il barbiere non lavora in questo giorno." };
+  if (allowed && !allowed.includes(parsed.data.startTime)) {
+    return { error: "Scegli uno degli orari disponibili." };
+  }
 
   const { data: recurringBooking, error } = await supabase
     .from("recurring_bookings")

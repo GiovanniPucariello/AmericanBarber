@@ -19,8 +19,7 @@ export function SlotTimesForm({ slotTimes }: { slotTimes: unknown }) {
       <h2 className="font-semibold">Orari di inizio degli appuntamenti</h2>
       <p className="text-sm text-paper-50/70">
         Scrivi gli orari in cui i clienti possono prenotare, separati da virgola (es. 08:20, 09:00, 09:45). Ogni
-        appuntamento dura fino al successivo, massimo 45 minuti. Lascia vuoto un giorno per usare la durata del
-        servizio scelto.
+        appuntamento dura fino al successivo, massimo 45 minuti.
       </p>
       {WEEKDAY_LABELS.map((label, weekday) => (
         <label key={weekday} className="flex flex-col gap-1">
@@ -30,7 +29,7 @@ export function SlotTimesForm({ slotTimes }: { slotTimes: unknown }) {
             defaultValue={dayStartTimes(slotTimes, weekday)?.join(", ") ?? ""}
             inputMode="numeric"
             autoComplete="off"
-            placeholder="Durata del servizio"
+            placeholder="Nessuno slot fisso"
             className={inputClass}
           />
         </label>

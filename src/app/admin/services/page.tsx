@@ -32,10 +32,9 @@ export default async function ServicesPage() {
           >
             <div>
               <p className={s.active ? "" : "opacity-50"}>{s.name}</p>
-              <p className="text-sm text-paper-50/60">
-                {s.duration_minutes} min
-                {s.price_cents != null ? ` - ${(s.price_cents / 100).toFixed(2)}` : ""}
-              </p>
+              {s.price_cents != null && (
+                <p className="text-sm text-paper-50/60">€{(s.price_cents / 100).toFixed(2).replace(".", ",")}</p>
+              )}
             </div>
             <div className="flex gap-3 shrink-0">
               <Link

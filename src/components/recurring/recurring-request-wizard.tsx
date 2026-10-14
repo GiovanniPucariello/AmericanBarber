@@ -6,6 +6,7 @@ import {
   type RecurringActionState,
 } from "@/lib/recurring/actions";
 import { FormError } from "@/components/ui/form-error";
+import { dayStartTimes } from "@/lib/availability/slot-times";
 
 const initialState: RecurringActionState = { error: null };
 
@@ -28,10 +29,12 @@ export function RecurringRequestWizard({
   hairdresserName,
   hairdresserId,
   services,
+  slotTimes,
 }: {
   hairdresserName: string;
   hairdresserId: string;
   services: Service[];
+  slotTimes: unknown;
 }) {
   const [state, formAction, pending] = useActionState(
     createRecurringBookingRequest,
@@ -122,8 +125,13 @@ export function RecurringRequestWizard({
               <button
                 key={i}
                 type="button"
-                onClick={() => setWeekday(i)}
-                className={`h-14 rounded-md border ${
+                // With a slot list, only the days that have slots are bookable.
+                disabled={!!slotTimes && !dayStartTimes(slotTimes, i)}
+                onClick={() => {
+                  setWeekday(i);
+                  setStartTime("");
+                }}
+                className={`h-14 rounded-md border disabled:opacity-30 ${
                   weekday === i ? "border-accent bg-accent text-paper-50" : "bg-ink-900 border-paper-50/15"
                 }`}
               >
@@ -159,13 +167,30 @@ export function RecurringRequestWizard({
       {step === 3 && (
         <div className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">A che ora?</h2>
-          <input
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            onKeyDown={suppressEnter}
-            className={inputClass}
-          />
+          {weekday !== null && dayStartTimes(slotTimes, weekday) ? (
+            <div className="grid grid-cols-4 gap-2">
+              {dayStartTimes(slotTimes, weekday)!.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setStartTime(t)}
+                  className={`h-11 rounded-md border text-sm tabular-nums ${
+                    startTime === t ? "border-accent bg-accent text-paper-50" : "bg-ink-900 border-paper-50/15"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              onKeyDown={suppressEnter}
+              className={inputClass}
+            />
+          )}
         </div>
       )}
 

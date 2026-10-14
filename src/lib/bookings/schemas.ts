@@ -14,3 +14,20 @@ export const createAppointmentSchema = z.object({
   serviceId: looseUuid,
   startUtc: z.string().datetime(),
 });
+
+// A barber booking on their own agenda: a registered customer (picked from
+// the shop's customers, so they get notified) or a walk-in's free-text name.
+export const staffBookingSchema = z
+  .object({
+    serviceId: looseUuid,
+    startUtc: z.string().datetime(),
+    customerProfileId: looseUuid.optional().or(z.literal("")),
+    guestName: z.string().trim().max(100, "Nome troppo lungo.").optional().or(z.literal("")),
+    recurring: z.literal("on").optional(),
+    intervalWeeks: z.coerce.number().int().min(1).max(2).default(1),
+    endsOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data non valida.").optional().or(z.literal("")),
+  })
+  .refine((v) => v.customerProfileId || v.guestName, {
+    message: "Scegli un cliente registrato o scrivi il nome del cliente.",
+    path: ["guestName"],
+  });

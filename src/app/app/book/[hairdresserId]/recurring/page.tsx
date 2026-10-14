@@ -16,7 +16,7 @@ export default async function RecurringRequestPage({
 
   const { data: hairdresser } = await supabase
     .from("hairdressers")
-    .select("display_name")
+    .select("display_name, slot_times")
     .eq("id", hairdresserId)
     .eq("organization_id", organization.id)
     .eq("active", true)
@@ -38,6 +38,7 @@ export default async function RecurringRequestPage({
         hairdresserId={hairdresserId}
         hairdresserName={hairdresser.display_name}
         services={services}
+        slotTimes={hairdresser.slot_times}
       />
     </div>
   );

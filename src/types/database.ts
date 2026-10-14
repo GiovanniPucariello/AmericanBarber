@@ -81,8 +81,9 @@ export type Database = {
           cancelled_by: string | null
           created_at: string
           created_by: string
-          customer_profile_id: string
+          customer_profile_id: string | null
           during: unknown
+          guest_name: string | null
           hairdresser_id: string
           id: string
           location_id: string
@@ -98,8 +99,9 @@ export type Database = {
           cancelled_by?: string | null
           created_at?: string
           created_by: string
-          customer_profile_id: string
+          customer_profile_id?: string | null
           during: unknown
+          guest_name?: string | null
           hairdresser_id: string
           id?: string
           location_id: string
@@ -115,8 +117,9 @@ export type Database = {
           cancelled_by?: string | null
           created_at?: string
           created_by?: string
-          customer_profile_id?: string
+          customer_profile_id?: string | null
           during?: unknown
+          guest_name?: string | null
           hairdresser_id?: string
           id?: string
           location_id?: string
@@ -465,6 +468,32 @@ export type Database = {
           },
         ]
       }
+      calendar_feeds: {
+        Row: {
+          created_at: string
+          hairdresser_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          hairdresser_id: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          hairdresser_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_feeds_hairdresser_id_fkey"
+            columns: ["hairdresser_id"]
+            isOneToOne: true
+            referencedRelation: "hairdressers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_notes: {
         Row: {
           author_profile_id: string | null
@@ -624,50 +653,50 @@ export type Database = {
       }
       hairdressers: {
         Row: {
-          alternating_slots: boolean
-          slot_times: Json | null
           active: boolean
+          alternating_slots: boolean
           avatar_url: string | null
           bio: string | null
           created_at: string
           display_name: string
           id: string
           instagram_handle: string | null
-          phone: string | null
           organization_id: string
+          phone: string | null
           profile_id: string | null
+          slot_times: Json | null
           sort_order: number
           updated_at: string
         }
         Insert: {
-          alternating_slots?: boolean
-          slot_times?: Json | null
           active?: boolean
+          alternating_slots?: boolean
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           display_name: string
           id?: string
           instagram_handle?: string | null
-          phone?: string | null
           organization_id: string
+          phone?: string | null
           profile_id?: string | null
+          slot_times?: Json | null
           sort_order?: number
           updated_at?: string
         }
         Update: {
-          alternating_slots?: boolean
-          slot_times?: Json | null
           active?: boolean
+          alternating_slots?: boolean
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           display_name?: string
           id?: string
           instagram_handle?: string | null
-          phone?: string | null
           organization_id?: string
+          phone?: string | null
           profile_id?: string | null
+          slot_times?: Json | null
           sort_order?: number
           updated_at?: string
         }
@@ -1105,10 +1134,11 @@ export type Database = {
       recurring_bookings: {
         Row: {
           created_at: string
-          customer_profile_id: string
+          customer_profile_id: string | null
           decided_at: string | null
           decided_by: string | null
           ends_on: string | null
+          guest_name: string | null
           hairdresser_id: string
           id: string
           interval_weeks: number
@@ -1124,10 +1154,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          customer_profile_id: string
+          customer_profile_id?: string | null
           decided_at?: string | null
           decided_by?: string | null
           ends_on?: string | null
+          guest_name?: string | null
           hairdresser_id: string
           id?: string
           interval_weeks?: number
@@ -1143,10 +1174,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          customer_profile_id?: string
+          customer_profile_id?: string | null
           decided_at?: string | null
           decided_by?: string | null
           ends_on?: string | null
+          guest_name?: string | null
           hairdresser_id?: string
           id?: string
           interval_weeks?: number
@@ -1416,6 +1448,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_default_availability_rules: {
+        Args: { p_hairdresser_id: string }
+        Returns: undefined
+      }
       emit_notification_event: {
         Args: {
           p_appointment_id?: string
@@ -1425,6 +1461,7 @@ export type Database = {
         Returns: undefined
       }
       enqueue_appointment_reminders: { Args: never; Returns: undefined }
+      enqueue_appointment_reminders_30m: { Args: never; Returns: undefined }
       generate_recurring_occurrences: {
         Args: { p_horizon_weeks?: number; p_recurring_booking_id: string }
         Returns: undefined
@@ -1456,6 +1493,10 @@ export type Database = {
       }
       reschedule_appointment: {
         Args: { p_appointment_id: string; p_new_start: string }
+        Returns: undefined
+      }
+      respond_to_appointment_reschedule: {
+        Args: { p_accept: boolean; p_appointment_id: string }
         Returns: undefined
       }
       role_rank: {
@@ -1493,6 +1534,8 @@ export type Database = {
         | "reschedule_accepted"
         | "reschedule_declined"
         | "booking_cancelled_by_hairdresser"
+        | "booked_by_hairdresser"
+        | "reminder_30m"
       notification_status: "pending" | "sent" | "failed" | "read"
       org_role: "customer" | "hairdresser" | "manager" | "admin" | "owner"
       recurring_booking_status:
@@ -1667,6 +1710,8 @@ export const Constants = {
         "reschedule_accepted",
         "reschedule_declined",
         "booking_cancelled_by_hairdresser",
+        "booked_by_hairdresser",
+        "reminder_30m",
       ],
       notification_status: ["pending", "sent", "failed", "read"],
       org_role: ["customer", "hairdresser", "manager", "admin", "owner"],

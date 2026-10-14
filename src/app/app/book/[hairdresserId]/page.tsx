@@ -176,10 +176,11 @@ export default async function ChooseServiceAndTimePage({
             }`}
           >
             <span className="text-sm font-medium leading-tight">{s.name}</span>
-            <span className={`text-xs ${s.id === service.id ? "text-paper-50/80" : "text-paper-50/50"}`}>
-              {s.duration_minutes} min
-              {s.price_cents != null && ` · €${(s.price_cents / 100).toFixed(2).replace(".", ",")}`}
-            </span>
+            {s.price_cents != null && (
+              <span className={`text-xs ${s.id === service.id ? "text-paper-50/80" : "text-paper-50/50"}`}>
+                €{(s.price_cents / 100).toFixed(2).replace(".", ",")}
+              </span>
+            )}
           </Link>
         ))}
       </div>

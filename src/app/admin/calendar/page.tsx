@@ -33,7 +33,7 @@ export default async function AdminCalendarPage({
 
   let query = supabase
     .from("appointments")
-    .select("id, during, status, customer_profile_id, hairdressers(display_name), services(name)")
+    .select("id, during, status, customer_profile_id, guest_name, hairdressers(display_name), services(name)")
     .eq("organization_id", organization.id)
     .in("status", ["pending", "confirmed"])
     .overlaps("during", dayRangeLiteral);
@@ -49,12 +49,12 @@ export default async function AdminCalendarPage({
       const { start } = parseRange(a.during as string);
       const hairdresser = Array.isArray(a.hairdressers) ? a.hairdressers[0] : a.hairdressers;
       const service = Array.isArray(a.services) ? a.services[0] : a.services;
-      return { id: a.id, start, customerProfileId: a.customer_profile_id, hairdresserName: hairdresser?.display_name, serviceName: service?.name };
+      return { id: a.id, start, customerProfileId: a.customer_profile_id, guestName: a.guest_name, hairdresserName: hairdresser?.display_name, serviceName: service?.name };
     })
     .filter((a) => a.start >= dayStartMs && a.start < dayEndMs)
     .sort((a, b) => a.start - b.start);
 
-  const customerIds = [...new Set(appointments.map((a) => a.customerProfileId))];
+  const customerIds = [...new Set(appointments.map((a) => a.customerProfileId).filter((id): id is string => !!id))];
   const { data: customers } = customerIds.length
     ? await supabase.from("co_member_profiles").select("id, full_name").in("id", customerIds)
     : { data: [] };
@@ -116,7 +116,7 @@ export default async function AdminCalendarPage({
                 {DateTime.fromMillis(a.start, { zone: "utc" }).setZone(organization.timezone).toFormat("HH:mm")}
               </span>
               <div>
-                <p>{nameById.get(a.customerProfileId) ?? "Cliente"}</p>
+                <p>{(a.customerProfileId && nameById.get(a.customerProfileId)) || a.guestName || "Cliente"}</p>
                 <p className="text-paper-50/60 text-sm">
                   {a.hairdresserName} - {a.serviceName}
                 </p>

@@ -73,6 +73,15 @@ export default async function RecurringAppointmentsPage() {
             </div>
 
             {rule.status === "active" && (
+              <a
+                href={`/app/appointments/recurring/${rule.id}/calendar`}
+                className="h-11 px-4 rounded-md border border-paper-50/25 text-sm font-medium flex items-center justify-center"
+              >
+                Aggiungi tutta la serie al calendario
+              </a>
+            )}
+
+            {rule.status === "active" && (
               <form action={cancelAllFutureOccurrences.bind(null, rule.id)}>
                 <button type="submit" className="text-sm underline underline-offset-2">
                   Annulla tutti gli appuntamenti futuri

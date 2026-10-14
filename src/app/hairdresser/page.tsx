@@ -67,7 +67,7 @@ export default async function HairdresserAgendaPage({
     }),
     supabase
       .from("appointments")
-      .select("id, during, customer_profile_id, services(name)")
+      .select("id, during, customer_profile_id, guest_name, services(name)")
       .eq("hairdresser_id", hairdresser.id)
       .in("status", ["pending", "confirmed"])
       .overlaps("during", dayRangeLiteral),
@@ -84,7 +84,7 @@ export default async function HairdresserAgendaPage({
       .overlaps("during", monthRangeLiteral),
     supabase
       .from("appointments")
-      .select("id, during, customer_profile_id, services(name)")
+      .select("id, during, customer_profile_id, guest_name, services(name)")
       .eq("hairdresser_id", hairdresser.id)
       .in("status", ["pending", "confirmed"])
       .overlaps("during", weekRangeLiteral),
@@ -98,7 +98,7 @@ export default async function HairdresserAgendaPage({
     .map((a) => {
       const { start } = parseRange(a.during as string);
       const service = Array.isArray(a.services) ? a.services[0] : a.services;
-      return { id: a.id, start, customerProfileId: a.customer_profile_id, serviceName: service?.name ?? "" };
+      return { id: a.id, start, customerProfileId: a.customer_profile_id, guestName: a.guest_name, serviceName: service?.name ?? "" };
     })
     .sort((x, y) => x.start - y.start);
   const todayEndMs = todayStartLocal.plus({ days: 1 }).toMillis();
@@ -115,14 +115,16 @@ export default async function HairdresserAgendaPage({
         start,
         end,
         customerProfileId: a.customer_profile_id,
+        guestName: a.guest_name,
         serviceName: service?.name ?? "",
       };
     })
     .filter((a) => a.start >= dayStartMs && a.start < dayEndMs);
 
+  // Walk-in guests have no profile (customer_profile_id null), just a name.
   const customerIds = [
     ...new Set([...todaysAppointments.map((a) => a.customerProfileId), ...(nextUp ? [nextUp.customerProfileId] : [])]),
-  ];
+  ].filter((id): id is string => !!id);
   const { data: customers } = customerIds.length
     ? await supabase.from("co_member_profiles").select("id, full_name").in("id", customerIds)
     : { data: [] };
@@ -152,7 +154,7 @@ export default async function HairdresserAgendaPage({
     id: a.id,
     start: a.start,
     end: a.end,
-    customerName: nameById.get(a.customerProfileId) ?? "Cliente",
+    customerName: (a.customerProfileId && nameById.get(a.customerProfileId)) || a.guestName || "Cliente",
     serviceName: a.serviceName,
     status: "confirmed",
   }));
@@ -170,12 +172,20 @@ export default async function HairdresserAgendaPage({
 
   return (
     <div className="p-6 flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{hairdresser.displayName}</h1>
-        <p className="text-paper-50/60 text-sm">
-          {date === today ? "Oggi, " : ""}
-          {DateTime.fromISO(date, { zone: organization.timezone }).toFormat("cccc d LLLL")}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{hairdresser.displayName}</h1>
+          <p className="text-paper-50/60 text-sm">
+            {date === today ? "Oggi, " : ""}
+            {DateTime.fromISO(date, { zone: organization.timezone }).toFormat("cccc d LLLL")}
+          </p>
+        </div>
+        <Link
+          href={`/hairdresser/appointments/new?date=${date}`}
+          className="h-11 px-3 rounded-md bg-accent text-paper-50 text-sm font-medium flex items-center shrink-0"
+        >
+          + Nuovo appuntamento
+        </Link>
       </div>
 
       <section className="flex flex-col gap-3" aria-label="Riepilogo">
@@ -199,7 +209,7 @@ export default async function HairdresserAgendaPage({
             <div className="min-w-0">
               <p className="text-xs text-paper-50/60">Prossimo cliente</p>
               <p className="font-semibold truncate">
-                {nameById.get(nextUp.customerProfileId) ?? "Cliente"} · {nextUp.serviceName}
+                {(nextUp.customerProfileId && nameById.get(nextUp.customerProfileId)) || nextUp.guestName || "Cliente"} · {nextUp.serviceName}
               </p>
             </div>
             <div className="text-right shrink-0">
@@ -277,12 +287,16 @@ export default async function HairdresserAgendaPage({
               <li key={i} className="flex items-center gap-3 rounded-md bg-ink-900 border border-paper-50/15 p-3">
                 <span className="w-14 shrink-0 text-sm">{time}</span>
                 <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/hairdresser/customers/${customerIdByAppointment.get(item.id)}`}
-                    className="underline underline-offset-2"
-                  >
-                    {item.customerName}
-                  </Link>
+                  {customerIdByAppointment.get(item.id) ? (
+                    <Link
+                      href={`/hairdresser/customers/${customerIdByAppointment.get(item.id)}`}
+                      className="underline underline-offset-2"
+                    >
+                      {item.customerName}
+                    </Link>
+                  ) : (
+                    <p>{item.customerName}</p>
+                  )}
                   <p className="text-paper-50/60 text-sm">{item.serviceName}</p>
                   {latestNoteByCustomer.get(customerIdByAppointment.get(item.id) ?? "") && (
                     <p className="text-sm text-paper-50/80 mt-1 line-clamp-2">

@@ -42,18 +42,9 @@ export function ServiceForm({
         rows={3}
         className={`${inputClass} h-auto py-3`}
       />
-      <label className="text-sm text-paper-50/60">
-        Durata (minuti)
-        <input
-          name="durationMinutes"
-          type="number"
-          min={5}
-          step={5}
-          defaultValue={defaultValues?.duration_minutes ?? 30}
-          required
-          className={`${inputClass} w-full mt-1`}
-        />
-      </label>
+      {/* Not shown: bookings follow the barbers' fixed slot times. Kept only as
+          the fallback length on days a barber has no slot list. */}
+      <input type="hidden" name="durationMinutes" value={defaultValues?.duration_minutes ?? 30} />
       <label className="text-sm text-paper-50/60">
         Prezzo in centesimi (facoltativo)
         <input

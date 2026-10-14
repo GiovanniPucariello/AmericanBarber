@@ -52,7 +52,6 @@ export default async function ConfirmBookingPage({
   const endLocal = slot
     ? DateTime.fromISO(slot.endUtc, { zone: "utc" }).setZone(organization.timezone)
     : startLocal.plus({ minutes: service.duration_minutes });
-  const minutes = Math.round(endLocal.diff(startLocal, "minutes").minutes);
 
   const dateKey = startLocal.toISODate();
 
@@ -70,7 +69,7 @@ export default async function ConfirmBookingPage({
           <div>
             <p className="font-medium">{service.name}</p>
             <p className="text-paper-50/60 text-sm">
-              con {hairdresser.display_name} · {minutes} min
+              con {hairdresser.display_name}
             </p>
           </div>
           {service.price_cents != null && (

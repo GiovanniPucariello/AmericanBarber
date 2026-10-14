@@ -30,6 +30,10 @@ export function summarize(n: NotificationSummaryInput, basePath: "/app" | "/hair
       return `${n.hairdresser_name ?? "Il barbiere"} ha annullato il tuo appuntamento - prenotane un altro quando vuoi`;
     case "schedule_changed":
       return `${n.hairdresser_name ?? "Il tuo barbiere"} ha spostato il tuo appuntamento di ${n.service_name ?? "servizio"}`;
+    case "booked_by_hairdresser":
+      return `${n.hairdresser_name ?? "Il tuo barbiere"} ti ha prenotato: ${n.service_name ?? "appuntamento"}`;
+    case "reminder_30m":
+      return `Tra 30 minuti: ${n.service_name ?? "appuntamento"} con ${n.hairdresser_name ?? "il tuo barbiere"}`;
     case "reminder_24h":
       return `Promemoria: domani ${n.service_name ?? "appuntamento"} con ${n.hairdresser_name ?? "il tuo barbiere"}`;
     default:

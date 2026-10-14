@@ -189,10 +189,7 @@ export default async function Home() {
                 key={service.id}
                 className="rounded-lg bg-ink-900 border border-paper-50/15 p-4 flex items-center justify-between gap-3"
               >
-                <div>
-                  <p className="font-medium">{service.name}</p>
-                  <p className="text-paper-50/50 text-sm">{service.duration_minutes} min</p>
-                </div>
+                <p className="font-medium">{service.name}</p>
                 {service.price_cents != null && (
                   <p className="text-paper-50/80 font-medium shrink-0">
                     €{(service.price_cents / 100).toFixed(2).replace(".", ",")}

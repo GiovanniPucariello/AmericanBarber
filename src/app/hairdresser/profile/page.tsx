@@ -7,6 +7,9 @@ import { getCurrentHairdresser } from "@/lib/hairdressers/queries";
 import { parseRange } from "@/lib/availability/intervals";
 import { PushToggle } from "@/components/push/push-toggle";
 import { ContactsForm } from "@/components/hairdressers/contacts-form";
+import { headers } from "next/headers";
+import { enableCalendarFeed } from "@/lib/calendar/actions";
+import { CalendarSyncLinks } from "@/components/calendar/calendar-sync";
 
 const WEEKDAYS = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"];
 
@@ -41,7 +44,7 @@ export default async function HairdresserProfilePage() {
   const monthDone = done.filter(inMonth);
   const monthUpcoming = appts.filter((a) => inMonth(a) && a.status === "confirmed" && a.start > nowMs).length;
   const monthCancelled = appts.filter((a) => inMonth(a) && a.status === "cancelled").length;
-  const monthCustomers = new Set(monthDone.map((a) => a.customer_profile_id)).size;
+  const monthCustomers = new Set(monthDone.map((a) => a.customer_profile_id ?? a.start)).size;
 
   const last90 = done.filter((a) => a.start >= now.minus({ days: 90 }).toMillis());
   const perWeekday = Array(7).fill(0) as number[];
@@ -50,12 +53,20 @@ export default async function HairdresserProfilePage() {
   const busiestDay = busiest > 0 ? WEEKDAYS[perWeekday.indexOf(busiest)] : null;
 
   const visitsBy = new Map<string, number>();
-  for (const a of last90) visitsBy.set(a.customer_profile_id, (visitsBy.get(a.customer_profile_id) ?? 0) + 1);
+  for (const a of last90) if (a.customer_profile_id) visitsBy.set(a.customer_profile_id, (visitsBy.get(a.customer_profile_id) ?? 0) + 1);
   const topIds = [...visitsBy.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3);
   const { data: topProfiles } = topIds.length
     ? await supabase.from("co_member_profiles").select("id, full_name").in("id", topIds.map(([id]) => id))
     : { data: [] };
   const nameOf = new Map((topProfiles ?? []).map((p) => [p.id, p.full_name]));
+
+  const { data: feed } = hairdresser
+    ? await supabase.from("calendar_feeds").select("token").eq("hairdresser_id", hairdresser.id).maybeSingle()
+    : { data: null };
+  const h = await headers();
+  const feedUrl = feed
+    ? `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}/api/calendar/${feed.token}.ics`
+    : null;
 
   const stats = [
     { label: "Tagli fatti questo mese", value: monthDone.length },
@@ -106,6 +117,33 @@ export default async function HairdresserProfilePage() {
       {hairdresser && (
         <section className="rounded-lg bg-ink-900 border border-paper-50/15 p-4">
           <ContactsForm handle={hairdresser.instagramHandle ?? ""} phone={hairdresser.phone ?? ""} />
+        </section>
+      )}
+
+      {hairdresser && (
+        <section className="rounded-lg bg-ink-900 border border-paper-50/15 p-4 flex flex-col gap-3">
+          <h2 className="font-semibold">Calendario del telefono</h2>
+          {feedUrl ? (
+            <>
+              <CalendarSyncLinks httpsUrl={feedUrl} />
+              <form action={enableCalendarFeed.bind(null, true)}>
+                <button type="submit" className="text-xs text-paper-50/60 underline underline-offset-2">
+                  Genera un nuovo link (il vecchio smette di funzionare)
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-paper-50/70">
+                Collega l&apos;agenda al calendario del telefono: tutti gli appuntamenti compaiono lì e si aggiornano da soli.
+              </p>
+              <form action={enableCalendarFeed.bind(null, false)}>
+                <button type="submit" className="h-11 w-full rounded-md bg-accent text-paper-50 text-sm font-medium">
+                  Attiva sincronizzazione
+                </button>
+              </form>
+            </>
+          )}
         </section>
       )}
 

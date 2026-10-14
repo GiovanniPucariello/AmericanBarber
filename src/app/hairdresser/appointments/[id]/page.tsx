@@ -29,7 +29,7 @@ export default async function HairdresserAppointmentPage({
   const supabase = await createClient();
   const { data: appointment } = await supabase
     .from("appointments")
-    .select("id, during, status, service_id, customer_profile_id, services(name)")
+    .select("id, during, status, service_id, customer_profile_id, guest_name, services(name)")
     .eq("id", id)
     .eq("hairdresser_id", hairdresser.id)
     .maybeSingle();
@@ -43,11 +43,13 @@ export default async function HairdresserAppointmentPage({
   const service = Array.isArray(appointment.services) ? appointment.services[0] : appointment.services;
   const active = ["pending", "confirmed"].includes(appointment.status) && start > Date.now();
 
-  const { data: customer } = await supabase
-    .from("co_member_profiles")
-    .select("id, full_name, phone")
-    .eq("id", appointment.customer_profile_id)
-    .maybeSingle();
+  const { data: customer } = appointment.customer_profile_id
+    ? await supabase
+        .from("co_member_profiles")
+        .select("id, full_name, phone")
+        .eq("id", appointment.customer_profile_id)
+        .maybeSingle()
+    : { data: null };
 
   const { date: requestedDate } = await searchParams;
   const date = requestedDate ?? (startLocal.toISODate() as string);
@@ -84,19 +86,28 @@ export default async function HairdresserAppointmentPage({
       </div>
 
       <section className="rounded-lg bg-ink-900 border border-paper-50/15 p-4 flex flex-col gap-2">
-        <Link href={`/hairdresser/customers/${appointment.customer_profile_id}`} className="font-semibold underline underline-offset-2 self-start">
-          {customer?.full_name ?? "Cliente"}
-        </Link>
-        {customer?.phone ? (
-          <a href={`tel:${customer.phone.replace(/\s/g, "")}`} className="h-11 px-4 rounded-md border border-paper-50/25 text-sm font-medium flex items-center self-start">
-            Chiama {customer.phone}
-          </a>
+        {appointment.customer_profile_id ? (
+          <>
+            <Link href={`/hairdresser/customers/${appointment.customer_profile_id}`} className="font-semibold underline underline-offset-2 self-start">
+              {customer?.full_name ?? "Cliente"}
+            </Link>
+            {customer?.phone ? (
+              <a href={`tel:${customer.phone.replace(/\s/g, "")}`} className="h-11 px-4 rounded-md border border-paper-50/25 text-sm font-medium flex items-center self-start">
+                Chiama {customer.phone}
+              </a>
+            ) : (
+              <p className="text-sm text-paper-50/50">Nessun telefono nel profilo del cliente.</p>
+            )}
+            <Link href={`/hairdresser/appointments/${id}/messages`} className="h-11 px-4 rounded-md bg-ink-800 border border-paper-50/15 text-sm font-medium flex items-center self-start">
+              Scrivi al cliente
+            </Link>
+          </>
         ) : (
-          <p className="text-sm text-paper-50/50">Nessun telefono nel profilo del cliente.</p>
+          <>
+            <p className="font-semibold">{appointment.guest_name}</p>
+            <p className="text-sm text-paper-50/50">Cliente non registrato - nessuna notifica né messaggi.</p>
+          </>
         )}
-        <Link href={`/hairdresser/appointments/${id}/messages`} className="h-11 px-4 rounded-md bg-ink-800 border border-paper-50/15 text-sm font-medium flex items-center self-start">
-          Scrivi al cliente
-        </Link>
       </section>
 
       {active && (

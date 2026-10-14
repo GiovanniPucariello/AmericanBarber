@@ -9,7 +9,7 @@ import {
   availabilityExceptionSchema,
   blockedSlotSchema,
 } from "@/lib/availability/schemas";
-import { createAppointmentSchema } from "@/lib/bookings/schemas";
+import { createAppointmentSchema, staffBookingSchema } from "@/lib/bookings/schemas";
 import { hairdresserSchema } from "@/lib/hairdressers/schemas";
 import { createRecurringBookingSchema } from "@/lib/recurring/schemas";
 import { serviceSchema } from "@/lib/services/schemas";
@@ -203,5 +203,26 @@ describe("organizationSettingsSchema", () => {
 
   it("rejects a booking interval outside 5-120 minutes", () => {
     expect(organizationSettingsSchema.safeParse({ ...base, bookingIntervalMinutes: 200 }).success).toBe(false);
+  });
+});
+
+describe("staffBookingSchema", () => {
+  const base = {
+    serviceId: "00000000-0000-0000-0000-000000000301",
+    startUtc: "2026-10-20T07:20:00.000Z",
+  };
+
+  it("needs a registered customer or a guest name", () => {
+    expect(staffBookingSchema.safeParse({ ...base, customerProfileId: "", guestName: "  " }).success).toBe(false);
+    expect(staffBookingSchema.safeParse({ ...base, guestName: "Marco" }).success).toBe(true);
+    expect(
+      staffBookingSchema.safeParse({ ...base, customerProfileId: "00000000-0000-0000-0000-000000000901" }).success,
+    ).toBe(true);
+  });
+
+  it("allows only weekly or fortnightly series", () => {
+    expect(staffBookingSchema.safeParse({ ...base, guestName: "Marco", recurring: "on", intervalWeeks: 3 }).success).toBe(
+      false,
+    );
   });
 });
